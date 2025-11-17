@@ -1,0 +1,4 @@
+Django==4.0
+djangorestframework==3.14.0
+gunicorn==21.2.0
+psycopg2-binary==2.9.9

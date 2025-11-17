@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+env/
+venv/
+
+# Django-specific
+staticfiles/
+media/
+db.sqlite3
+
+# PostgreSQL dumps
+*.sql
+*.backup
+*.dump
+
+# Environment variables
+.env
+
+# Docker
+*.log
+postgres_data/
+
+# IDE / Editor
+.vscode/
+.idea/
