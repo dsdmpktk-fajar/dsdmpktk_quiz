@@ -37,6 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'nested_admin',
+    'cv',
+    'exam',
 ]
 
 MIDDLEWARE = [
@@ -74,12 +79,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    'default': dj_database_url.config(
+        default="postgres://postgres:postgres@db:5432/questionnaire"
+    )
     }
-}
 
 
 # Password validation
@@ -124,3 +130,7 @@ STATIC_ROOT = '/app/staticfiles'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+MEDIA_URL ='/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
