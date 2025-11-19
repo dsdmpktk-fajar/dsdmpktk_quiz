@@ -1,4 +1,5 @@
 import uuid
+import random
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -15,15 +16,25 @@ class ExamClass(models.Model):
         return self.name
 
 class Exam(models.Model):
+    def generate_exam_token():
+        return str(random.randint(100000, 999999))  # 6 digit
+
+
     exam_class = models.ForeignKey("ExamClass", on_delete=models.CASCADE, related_name="exams")
     exam_title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     start_date = models.DateTimeField(blank=True, null=True)
     end_date = models.DateTimeField(blank=True, null=True)
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # token per exam
+    
+    token = models.CharField(
+        max_length=6,
+        default=generate_exam_token,
+        unique=True,
+        editable=False
+        )
 
     def __str__(self):
-        return self.title
+        return self.exam_title
 
     def is_active(self):
         now = timezone.now()
@@ -36,7 +47,7 @@ class Question(models.Model):
         ('CHECK', 'Checkbox / Multiple Answers'),
         ('DROPDOWN', 'Dropdown'),
         ('TEXT', 'Essay / Text Answer'),
-    ]
+    ] 
 
     exam = models.ForeignKey('Exam', on_delete=models.CASCADE, related_name='questions')
     text = models.TextField()
@@ -45,7 +56,7 @@ class Question(models.Model):
     order = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return f"{self.exam.title} - Q{self.order}: {self.text[:50]}"
+        return f"{self.exam.exam_title} - Q{self.order}: {self.text[:50]}"
 
 
 class Choice(models.Model):
@@ -85,7 +96,7 @@ class Task(models.Model):
     due_date = models.DateTimeField()
     
     def __str__(self):
-        return self.title
+        return self.task_title
 
 
 class TaskSubmission(models.Model):
@@ -99,4 +110,4 @@ class TaskSubmission(models.Model):
         unique_together = ('task', 'user')  # satu user hanya boleh submit sekali
 
     def __str__(self):
-        return f"{self.user.username} - {self.task.title}"
+        return f"{self.user.username} - {self.task.task_title}"

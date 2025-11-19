@@ -1,14 +1,12 @@
-FROM python:3.12-slim
+FROM python:3.12-bookworm
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Pastikan setuptools, pip, wheel terbaru
 RUN pip install --upgrade pip setuptools wheel
 
 COPY requirements.txt .
