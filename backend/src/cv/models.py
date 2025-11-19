@@ -44,8 +44,8 @@ class Education(models.Model):
 
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='educations')
     degree = models.CharField(max_length=20, choices=DEGREE_CHOICES)
-    institution = models.CharField(max_length=255)
-    program = models.CharField(max_length=255, blank=True, null=True)
+    institution_name = models.CharField(max_length=255)
+    study_program = models.CharField(max_length=255, blank=True, null=True)
     year_in = models.PositiveIntegerField(blank=True, null=True)
     year_out = models.PositiveIntegerField(blank=True, null=True)
     gpa = models.FloatField(blank=True, null=True)
@@ -59,7 +59,7 @@ class Education(models.Model):
 # =======================
 class WorkExperience(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='work_experiences')
-    company = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
     position = models.CharField(max_length=255)
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
@@ -72,12 +72,20 @@ class WorkExperience(models.Model):
 # Skill
 # =======================
 class Skill(models.Model):
+    LEVEL_CHOICES = [
+        ("Basic", "Dasar"),
+        ("Intermediate", "Menengah"),
+        ("Advanced", "Mahir"),
+        ("Expert", "Ahli"),
+    ]
+    
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='skills')
     category = models.CharField(max_length=100, blank=True, null=True)
-    name = models.CharField(max_length=255)
+    skill_name = models.CharField(max_length=255)
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default="Basic")
 
     def __str__(self):
-        return self.name
+        return f"{self.skill_name} ({self.level})"
 
 
 # =======================
@@ -93,3 +101,31 @@ class Certification(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class LanguageSkill(models.Model):
+    PROFICIENCY_CHOICES = [
+        ("Basic", "Pemula"),
+        ("Intermediate", "Menengah"),
+        ("Advanced", "Mahir"),
+        ("Fluent", "Fasih"),
+        ("Native", "Penutur Asli"),
+    ]
+
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='languages')
+    language = models.CharField(max_length=100)
+    proficiency = models.CharField(max_length=20, choices=PROFICIENCY_CHOICES)
+
+    def __str__(self):
+        return f"{self.language} ({self.proficiency})"
+
+class TrainingHistory(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='trainings')
+    title = models.CharField(max_length=255)
+    organizer = models.CharField(max_length=255)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    certificate_file = models.FileField(upload_to='training_certificates/', blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.organizer}"

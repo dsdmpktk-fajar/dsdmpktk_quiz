@@ -9,8 +9,8 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: "postgres://postgres:postgres@db:5432/questionnaire"
-      POSTGRES_DB: "questionnaire"
+      DATABASE_URL: "postgres://postgres:postgres@db:5432/leap_unpad"
+      POSTGRES_DB: "leap_unpad"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
 
@@ -18,7 +18,7 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_DB: "questionnaire"
+      POSTGRES_DB: "leap"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
     volumes:

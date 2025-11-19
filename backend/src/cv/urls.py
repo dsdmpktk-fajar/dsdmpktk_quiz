@@ -6,18 +6,23 @@ from .views import (
     EducationViewSet,
     WorkExperienceViewSet,
     SkillViewSet,
-    CertificationViewSet
+    CertificationViewSet,
+    LanguageSkillViewSet,
+    TrainingHistoryViewSet,
+    FullCVViewSet
 )
 
-# Membuat router DRF
 router = DefaultRouter()
-router.register(r'profile', UserProfileViewSet, basename='profile')
-router.register(r'education', EducationViewSet, basename='education')
-router.register(r'work', WorkExperienceViewSet, basename='work')
-router.register(r'skills', SkillViewSet, basename='skills')
-router.register(r'certifications', CertificationViewSet, basename='certifications')
 
-# urlpatterns final
+router.register("profile", UserProfileViewSet, basename="profile")
+router.register("education", EducationViewSet, basename="education")
+router.register("work", WorkExperienceViewSet, basename="work")
+router.register("skills", SkillViewSet, basename="skills")
+router.register("certifications", CertificationViewSet, basename="certifications")
+router.register("languages", LanguageSkillViewSet, basename="languages")
+router.register("trainings", TrainingHistoryViewSet, basename="trainings")
+
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
+    path("full/", FullCVViewSet.as_view({'get': 'list'})),
 ]
