@@ -9,7 +9,8 @@ from .views import (
     CertificationViewSet,
     LanguageSkillViewSet,
     TrainingHistoryViewSet,
-    FullCVViewSet
+    FullCVViewSet,
+    CVGeneratorViewSet
 )
 
 router = DefaultRouter()
@@ -21,8 +22,11 @@ router.register("skills", SkillViewSet, basename="skills")
 router.register("certifications", CertificationViewSet, basename="certifications")
 router.register("languages", LanguageSkillViewSet, basename="languages")
 router.register("trainings", TrainingHistoryViewSet, basename="trainings")
+router.register("generator", CVGeneratorViewSet, basename="cv-generator")
+router.register("full", FullCVViewSet, basename="fullcv")
+
+
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("full/", FullCVViewSet.as_view({'get': 'list'})),
 ]

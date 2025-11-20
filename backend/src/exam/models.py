@@ -1,113 +1,294 @@
 import uuid
 import random
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.utils import timezone
 
-# Create your models here.
 
-class ExamClass(models.Model):
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
-    
-    def __str__(self):
-        return self.name
+# Class
 
-class Exam(models.Model):
-    def generate_exam_token():
-        return str(random.randint(100000, 999999))  # 6 digit
+def generate_token():
+    return str(random.randint(100000, 999999))
+
+class Course(models.Model):
 
 
-    exam_class = models.ForeignKey("ExamClass", on_delete=models.CASCADE, related_name="exams")
-    exam_title = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    start_date = models.DateTimeField(blank=True, null=True)
-    end_date = models.DateTimeField(blank=True, null=True)
-    
+
+    METHOD_CHOICES = [
+        ("online", "Online"),
+        ("offline", "Offline"),
+        ("hybrid", "Hybrid"),
+    ]
+
+    LEVEL_CHOICES = [
+        ("beginner", "Pemula"),
+        ("intermediate", "Menengah"),
+        ("advanced", "Mahir"),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES)
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
+
+    quota = models.PositiveIntegerField(default=0)
+
     token = models.CharField(
         max_length=6,
-        default=generate_exam_token,
+        default=generate_token,
         unique=True,
         editable=False
         )
 
-    def __str__(self):
-        return self.exam_title
 
-    def is_active(self):
-        now = timezone.now()
-        return (self.start_date <= now <= self.end_date) if self.start_date and self.end_date else True
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
 
-class Question(models.Model):
-    QUESTION_TYPES = [
-        ('MCQ', 'Multiple Choice'),
-        ('CHECK', 'Checkbox / Multiple Answers'),
-        ('DROPDOWN', 'Dropdown'),
-        ('TEXT', 'Essay / Text Answer'),
-    ] 
-
-    exam = models.ForeignKey('Exam', on_delete=models.CASCADE, related_name='questions')
-    text = models.TextField()
-    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
-    required = models.BooleanField(default=True)
-    order = models.PositiveIntegerField(default=0)
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = generate_token()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.exam.exam_title} - Q{self.order}: {self.text[:50]}"
+        return self.title
 
 
-class Choice(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='choices')
-    text = models.CharField(max_length=255)
-    score = models.FloatField(default=0)  # skoring setiap jawaban
-    is_correct = models.BooleanField(default=False)  # opsional, bisa untuk auto grading
+# Course Participant
 
-    def __str__(self):
-        return f"{self.question.text[:30]} -> {self.text}"
-    
+class CourseParticipant(models.Model):
+    ROLE_CHOICES = [
+        ("participant", "Peserta"),
+        ("trainer", "Instruktur"),
+        ("assessor", "Asesor"),
+    ]
 
-class UserAnswer(models.Model):
-    user_exam = models.ForeignKey('UserExam', on_delete=models.CASCADE, related_name='answers')
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    choice = models.ManyToManyField(Choice, blank=True)  # untuk MCQ atau CHECK
-    text_answer = models.TextField(blank=True, null=True)  # untuk essay / TEXT
-    score = models.FloatField(default=0)
-
-    class Meta:
-        unique_together = ('user_exam', 'question')
-
-
-class UserExam(models.Model):
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="user_exams")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, related_name="participants", on_delete=models.CASCADE)
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="participant")
+
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('exam', 'user')
+        unique_together = ("user", "course")
 
-
-class Task(models.Model):
-    exam_class = models.ForeignKey('ExamClass', on_delete=models.CASCADE, related_name='tasks')
-    task_title = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    due_date = models.DateTimeField()
-    
     def __str__(self):
-        return self.task_title
+        return f"{self.user} → {self.course} ({self.role})"
 
 
-class TaskSubmission(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='submissions')
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    file = models.FileField(upload_to='task_submissions/')
-    remarks = models.TextField(blank=True, null=True)
+# Silabus
+
+class CourseSyllabus(models.Model):
+    course = models.ForeignKey(Course, related_name="syllabus", on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+
+    order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ('task', 'user')  # satu user hanya boleh submit sekali
+        ordering = ["order", "start_time"]
+
+# Exam
+
+class Exam(models.Model):
+    course = models.ForeignKey(Course, related_name="exams", on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_private = models.BooleanField(default=False)
+
+    duration_minutes = models.PositiveIntegerField(default=0)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    shuffle_questions = models.BooleanField(default=False)  # default False lebih aman
+    shuffle_choices = models.BooleanField(default=False)
+
+    random_question_count = models.PositiveIntegerField(null=True, blank=True)
+    attempt_limit = models.PositiveIntegerField(default=1)
+    passing_grade = models.FloatField(null=True, blank=True)
+
+    # token
+    token = models.CharField(max_length=12, unique=True, blank=True, null=True)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_open(self):
+        now = timezone.now()
+
+        # Jika exam memiliki jadwal
+        if self.start_time and self.end_time:
+            return self.start_time <= now <= self.end_time
+
+        # Jika tidak pakai jadwal, gunakan status active
+        return self.is_active
+    
+
+    def save(self, *args, **kwargs):
+        # Jika exam private, token wajib ada → generate otomatis bila kosong
+        if self.is_private and not self.token:
+            self.token = generate_token()
+
+        # Jika exam tidak private → pastikan token dihapus
+        if not self.is_private:
+            self.token = None
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
-        return f"{self.user.username} - {self.task.task_title}"
+        return f"{self.course.title} - {self.title}"   
+
+# Pertanyaan
+
+class Question(models.Model):
+    QUESTION_TYPES = [
+        ("MCQ", "Multiple Choice"),
+        ("CHECK", "Checkbox (Multiple Correct)"),
+        ("TEXT", "Essay / Text"),
+        ("FILE", "File Upload"),
+        ("TRUEFALSE", "True / False"),
+        ("DROPDOWN", "Dropdown"),
+    ]
+
+    exam = models.ForeignKey(Exam, related_name="questions", on_delete=models.CASCADE)
+
+    text = models.TextField()
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
+
+    required = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    points = models.FloatField(default=1.0)
+    weight = models.FloatField(default=1.0)
+
+    allow_multiple_files = models.BooleanField(default=False)
+    allow_blank_answer = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.exam.title} - Q{self.order}"
+    
+# Pilihan Jawaban    
+
+class Choice(models.Model):
+    question = models.ForeignKey(Question, related_name="choices", on_delete=models.CASCADE)
+
+    text = models.CharField(max_length=1024)
+    score = models.FloatField(default=0.0)  
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"Choice Q{self.question_id}: {self.text[:30]}"
+
+# User Exam
+
+class UserExam(models.Model):
+    STATUS_CHOICES = [
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
+        ("abandoned", "Abandoned"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="user_exams", on_delete=models.CASCADE)
+    exam = models.ForeignKey(Exam, related_name="user_exams", on_delete=models.CASCADE)
+
+    attempt_number = models.PositiveIntegerField(default=1)
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="in_progress")
+
+    score = models.FloatField(default=0.0)
+    raw_score = models.FloatField(default=0.0)
+
+    finished = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user", "exam", "attempt_number")
+
+    def __str__(self):
+        return f"{self.user} → {self.exam} (Attempt {self.attempt_number})"
+
+
+# Jawaban User
+
+class UserAnswer(models.Model):
+    user_exam = models.ForeignKey(UserExam, related_name="answers", on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+
+    selected_choices = models.ManyToManyField(Choice, blank=True)
+    text_answer = models.TextField(blank=True, null=True)
+
+    score = models.FloatField(default=0.0)
+    graded = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("user_exam", "question")
+
+    def __str__(self):
+        return f"Answer: {self.user_exam} - {self.question}"
+
+# Submmit Task
+
+class CourseTask(models.Model):
+    course = models.ForeignKey(Course, related_name="tasks", on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    due_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    max_submissions = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"
+
+
+# Submit Tugas
+
+class CourseTaskSubmission(models.Model):
+    task = models.ForeignKey(CourseTask, related_name="submissions", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="course_task_submissions", on_delete=models.CASCADE)
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, null=True)
+
+    graded = models.BooleanField(default=False)
+    score = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("task", "user")
+
+    def __str__(self):
+        return f"{self.user} - {self.task}"
+
+
+
+# SUBMISSION FILES (MULTIFILE)
+
+class CourseTaskSubmissionFile(models.Model):
+    submission = models.ForeignKey(CourseTaskSubmission, related_name="files", on_delete=models.CASCADE)
+    file = models.FileField(upload_to="course_task_submissions/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"File for {self.submission}"        

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #222;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR KIRI */
+        .sidebar {
+            width: 30%;
+            background: #f3f3f3;
+            padding: 25px;
+        }
+
+        .name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .contact {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .section-title {
+            font-size: 12.5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .skill-badge {
+            display: inline-block;
+            background: #ddd;
+            padding: 3px 6px;
+            margin: 2px 2px 4px 0;
+            border-radius: 4px;
+            font-size: 10.5px;
+        }
+
+        /* BAGIAN KANAN */
+        .main {
+            width: 70%;
+            padding: 35px;
+        }
+
+        .main-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .item {
+            margin-bottom: 15px;
+        }
+
+        .item-title {
+            font-weight: bold;
+            font-size: 12.5px;
+        }
+
+        .item-sub {
+            font-style: italic;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        ul {
+            margin: 5px 0 15px 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+        <div class="name">{{ profile.full_name }}</div>
+
+        <div class="contact">
+            {% if profile.email %} {{ profile.email }}<br> {% endif %}
+            {% if profile.phone %} {{ profile.phone }}<br> {% endif %}
+            {% if profile.address %} {{ profile.address }}<br> {% endif %}
+        </div>
+
+        {% if skills %}
+            <div class="section-title">Keahlian</div>
+            {% for sk in skills %}
+                <div class="skill-badge">{{ sk.name }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if languages %}
+            <div class="section-title">Bahasa</div>
+            <ul>
+                {% for lg in languages %}
+                    <li>{{ lg.language }} ({{ lg.level }})</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if certs %}
+            <div class="section-title">Sertifikasi</div>
+            {% for cert in certs %}
+                <div>{{ cert.name }} ({{ cert.year }})</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- RIGHT MAIN SECTION -->
+    <div class="main">
+
+        {% if profile.summary %}
+            <div class="main-section-title">Ringkasan</div>
+            <p>{{ profile.summary }}</p>
+        {% endif %}
+
+        {% if work %}
+            <div class="main-section-title">Pengalaman Kerja</div>
+            {% for job in work %}
+                <div class="item">
+                    <div class="item-title">{{ job.job_title }}</div>
+                    <div class="item-sub">{{ job.company }} — {{ job.start_date }} hingga {{ job.end_date }}</div>
+                    <div>{{ job.description }}</div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if education %}
+            <div class="main-section-title">Pendidikan</div>
+            {% for edu in education %}
+                <div class="item">
+                    <div class="item-title">{{ edu.degree }} - {{ edu.school }}</div>
+                    <div class="item-sub">{{ edu.start_year }} — {{ edu.end_year }}</div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>

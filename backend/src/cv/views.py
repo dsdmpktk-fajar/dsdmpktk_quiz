@@ -2,6 +2,9 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from django.utils.text import slugify
+from .utils.generate_pdf import render_pdf
+
 from .models import (
     UserProfile,
     Education,
@@ -145,8 +148,56 @@ class TrainingHistoryViewSet(viewsets.ModelViewSet):
 
 class FullCVViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = FullCVSerializer
+    queryset = UserProfile.objects.none()
+
 
     def list(self, request):
         profile = get_or_create_profile(request.user)
         serializer = FullCVSerializer(profile)
         return Response(serializer.data)
+
+
+class CVGeneratorViewSet(viewsets.ViewSet):
+
+    @action(detail=True, methods=["get"], url_path="generate")
+    def generate_cv(self, request, pk=None):
+        # default theme: professional
+        theme = request.query_params.get("theme", "professional")
+        mode = request.query_params.get("mode", "download")  # preview / download
+
+        profile = get_object_or_404(UserProfile, user_id=pk)
+
+        education = Education.objects.filter(user=profile)
+        work = WorkExperience.objects.filter(user=profile)
+        skills = Skill.objects.filter(user=profile)
+        certs = Certification.objects.filter(user=profile)
+        languages = LanguageSkill.objects.filter(user=profile)
+        trainings = TrainingHistory.objects.filter(user=profile)
+
+        context = {
+            "profile": profile,
+            "education": education,
+            "work": work,
+            "skills": skills,
+            "certs": certs,
+            "languages": languages,
+            "trainings": trainings,
+            "achievements": [],
+        }
+
+        # filename custom
+        safe_name = slugify(profile.full_name)
+        filename = f"cv_{safe_name}_{pk}.pdf"
+
+        # =============================
+        # THEME PATH = cv/<theme>/index.html
+        # =============================
+        template_path = f"cv/{theme}/index.html"
+
+        return render_pdf(
+            template_src=template_path,
+            context=context,
+            filename=filename,
+            mode=mode
+        )

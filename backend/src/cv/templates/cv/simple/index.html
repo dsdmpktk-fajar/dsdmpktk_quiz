@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #222;
+            padding: 35px;
+            line-height: 1.45;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .contact {
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 3px;
+        }
+
+        .item {
+            margin-bottom: 12px;
+        }
+
+        .item-title {
+            font-weight: bold;
+            font-size: 12.5px;
+        }
+
+        .item-sub {
+            font-style: italic;
+            font-size: 11px;
+            color: #666;
+        }
+
+        ul {
+            margin: 5px 0 15px 20px;
+        }
+
+        .skill-badge {
+            display: inline-block;
+            background: #eee;
+            padding: 3px 6px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>{{ profile.full_name }}</h1>
+
+    <div class="contact">
+        {% if profile.email %} {{ profile.email }} | {% endif %}
+        {% if profile.phone %} {{ profile.phone }} | {% endif %}
+        {% if profile.address %} {{ profile.address }} {% endif %}
+    </div>
+
+    {% if profile.summary %}
+        <div class="section-title">Ringkasan</div>
+        <p>{{ profile.summary }}</p>
+    {% endif %}
+
+    {% if work %}
+        <div class="section-title">Pengalaman Kerja</div>
+        {% for job in work %}
+            <div class="item">
+                <div class="item-title">{{ job.job_title }} - {{ job.company }}</div>
+                <div class="item-sub">{{ job.start_date }} — {{ job.end_date }}</div>
+                <div>{{ job.description }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if education %}
+        <div class="section-title">Pendidikan</div>
+        {% for edu in education %}
+            <div class="item">
+                <div class="item-title">{{ edu.degree }} - {{ edu.school }}</div>
+                <div class="item-sub">{{ edu.start_year }} — {{ edu.end_year }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if skills %}
+        <div class="section-title">Keahlian</div>
+        {% for sk in skills %}
+            <span class="skill-badge">{{ sk.name }}</span>
+        {% endfor %}
+    {% endif %}
+
+    {% if certs %}
+        <div class="section-title">Sertifikasi</div>
+        {% for cert in certs %}
+            <div class="item">
+                <div class="item-title">{{ cert.name }}</div>
+                <div class="item-sub">{{ cert.year }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+</body>
+</html>
