@@ -44,6 +44,8 @@ class Course(models.Model):
 
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -291,4 +293,36 @@ class CourseTaskSubmissionFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"File for {self.submission}"        
+        return f"File for {self.submission}"
+    
+
+class CourseMaterial(models.Model):
+    MATERIAL_TYPES = [
+        ("pdf", "PDF"),
+        ("image", "Image"),
+        ("video", "Video"),
+        ("file", "File"),
+        ("link", "External Link"),
+    ]
+
+    course = models.ForeignKey(Course, related_name="materials", on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    material_type = models.CharField(max_length=20, choices=MATERIAL_TYPES)
+
+    # Optional file
+    file = models.FileField(upload_to="course_materials/", null=True, blank=True)
+
+    # Optional URL
+    url = models.URLField(null=True, blank=True)
+
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.course.title} - {self.title}"

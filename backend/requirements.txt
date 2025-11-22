@@ -16,3 +16,5 @@ whitenoise==6.5.0
 django-allauth==0.54.0
 requests-oauthlib
 weasyprint
+openpyxl
+django-extensions

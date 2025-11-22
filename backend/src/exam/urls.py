@@ -1,11 +1,26 @@
-# exam/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
+from .views import (
+    CourseViewSet,
+    ExamViewSet,
+    CourseTaskViewSet,
+    TaskSubmissionViewSet,
+)
 
 router = DefaultRouter()
 
+# COURSE + JOIN + PARTICIPANTS + SYLLABUS
+router.register("courses", CourseViewSet, basename="courses")
 
+# EXAM + start + questions + submit + finish
+router.register("exams", ExamViewSet, basename="exams")
+
+# TASK & SUBMISSION
+router.register("tasks", CourseTaskViewSet, basename="tasks")
+
+# TASK SUBMISSIONS (admin/assessor view)
+router.register("submissions", TaskSubmissionViewSet, basename="submissions")
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

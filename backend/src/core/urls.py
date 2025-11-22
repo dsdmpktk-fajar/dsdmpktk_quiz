@@ -18,11 +18,31 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 
+from rest_framework.routers import DefaultRouter
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+from exam.urls import router as exam_router
+from cv.urls import router as cv_router
+
+@api_view(["GET"])
+def api_root(request):
+    return Response({
+        "cv": request.build_absolute_uri("cv/"),
+        "exam": request.build_absolute_uri("exam/"),
+    })
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
-    path('api/cv/', include("cv.urls")),
-    path('api/exam/', include("exam.urls")),
+
+    # 🎯 Inilah route yang membuat /api/ tidak 404 lagi
+    path('api/', api_root, name="api-root"),
+
+    # Router asli tetap dipakai
+    path('api/cv/', include(cv_router.urls)),
+    path('api/exam/', include(exam_router.urls)),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
