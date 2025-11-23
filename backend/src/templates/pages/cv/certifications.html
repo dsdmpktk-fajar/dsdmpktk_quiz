@@ -1,0 +1,227 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Sertifikat{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Sertifikat" icon="award" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="certifications" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Daftar Sertifikat</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#certModal" onclick="resetCertForm()">
+            + Tambah Sertifikat
+        </button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table mb-0" id="certTable">
+                <thead>
+                    <tr>
+                        <th>Nama Sertifikat</th>
+                        <th>Penerbit</th>
+                        <th>Terbit</th>
+                        <th>Berlaku Sampai</th>
+                        <th>File</th>
+                        <th style="width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="certModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Sertifikat</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="certForm" enctype="multipart/form-data">
+                    <input type="hidden" name="id" id="cert_id">
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Nama Sertifikat</label>
+                        <input class="form-control" name="name" id="name" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Penerbit</label>
+                        <input class="form-control" name="issuer" id="issuer" type="text">
+                    </div>
+
+                    <div class="row gx-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Terbit</label>
+                            <input class="form-control" name="issue_date" id="issue_date" type="date">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Kadaluarsa (opsional)</label>
+                            <input class="form-control" name="expiry_date" id="expiry_date" type="date">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">File Sertifikat (opsional)</label>
+                        <input class="form-control" name="file" id="file" type="file">
+                        <small class="text-muted">PDF/JPG/PNG maksimal 5MB</small>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button class="btn btn-primary" onclick="saveCert()">Simpan</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", loadCertificates);
+
+let csrfToken = getCookie("csrftoken");
+
+// ==========================================
+// LOAD LIST CERTIFICATES
+// ==========================================
+async function loadCertificates() {
+    const res = await fetch("/api/cv/certifications/");
+    const data = await res.json();
+
+    const tbody = document.querySelector("#certTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.issuer}</td>
+                <td>${item.issue_date || "-"}</td>
+                <td>${item.expiry_date || "Tidak ada"}</td>
+                <td>
+                    ${item.file ? `<a href="${item.file}" target="_blank">Lihat</a>` : "-"}
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning" onclick="editCert(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCert(${item.id})">Hapus</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// ==========================================
+// RESET FORM
+// ==========================================
+function resetCertForm() {
+    document.getElementById("certForm").reset();
+    document.getElementById("cert_id").value = "";
+}
+
+// ==========================================
+// EDIT CERTIFICATE
+// ==========================================
+async function editCert(id) {
+    const res = await fetch(`/api/cv/certifications/${id}/`);
+    const data = await res.json();
+
+    document.getElementById("cert_id").value = data.id;
+    document.getElementById("name").value = data.name;
+    document.getElementById("issuer").value = data.issuer;
+    document.getElementById("issue_date").value = data.issue_date;
+    document.getElementById("expiry_date").value = data.expiry_date;
+
+    new bootstrap.Modal(document.getElementById("certModal")).show();
+}
+
+// ==========================================
+// SAVE (CREATE / UPDATE)
+// ==========================================
+async function saveCert() {
+    const id = document.getElementById("cert_id").value;
+
+    const form = document.getElementById("certForm");
+    const formData = new FormData(form);
+
+    let url = "/api/cv/certifications/";
+    let method = "POST";
+
+    if (id) {
+        url = `/api/cv/certifications/${id}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData
+    });
+
+    if (res.ok) {
+        alert("Sertifikat berhasil disimpan!");
+        loadCertificates();
+        bootstrap.Modal.getInstance(document.getElementById("certModal")).hide();
+    } else {
+        alert("Gagal menyimpan sertifikat.");
+    }
+}
+
+// ==========================================
+// DELETE CERTIFICATE
+// ==========================================
+async function deleteCert(id) {
+    if (!confirm("Hapus sertifikat ini?")) return;
+
+    const res = await fetch(`/api/cv/certifications/${id}/`, {
+        method: "DELETE",
+        headers: { "X-CSRFToken": csrfToken }
+    });
+
+    if (res.ok) {
+        alert("Berhasil dihapus!");
+        loadCertificates();
+    } else {
+        alert("Gagal menghapus sertifikat.");
+    }
+}
+
+// ==========================================
+// GET CSRF
+// ==========================================
+function getCookie(name) {
+    let cookieValue = null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+        const c = cookie.trim();
+        if (c.startsWith(name + "=")) {
+            cookieValue = c.substring(name.length + 1);
+            break;
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+
+{% endblock %}

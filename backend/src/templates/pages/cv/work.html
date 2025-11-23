@@ -1,0 +1,223 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Riwayat Pekerjaan{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Riwayat Pekerjaan" icon="briefcase" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="work" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Daftar Riwayat Pekerjaan</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#workModal" onclick="resetWorkForm()">
+            + Tambah Pengalaman
+        </button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table mb-0" id="workTable">
+                <thead>
+                    <tr>
+                        <th>Perusahaan</th>
+                        <th>Jabatan</th>
+                        <th>Periode</th>
+                        <th style="width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="workModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Riwayat Pekerjaan</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="workForm">
+                    <input type="hidden" name="id" id="work_id">
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Nama Perusahaan</label>
+                        <input class="form-control" name="company_name" id="company_name" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Jabatan</label>
+                        <input class="form-control" name="position" id="position" type="text">
+                    </div>
+
+                    <div class="row gx-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Mulai</label>
+                            <input class="form-control" name="start_date" id="start_date" type="date">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Selesai</label>
+                            <input class="form-control" name="end_date" id="end_date" type="date">
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button class="btn btn-primary" onclick="saveWork()">Simpan</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", loadWork);
+let csrfToken = getCookie("csrftoken");
+
+// =====================================
+// LOAD DATA LIST
+// =====================================
+async function loadWork() {
+    const res = await fetch("/api/cv/work/");
+    const data = await res.json();
+
+    const tbody = document.querySelector("#workTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.company_name || "-"}</td>
+                <td>${item.position || "-"}</td>
+                <td>${item.start_date || ""} - ${item.end_date || ""}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning" onclick="editWork(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteWork(${item.id})">Hapus</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// =====================================
+// RESET FORM
+// =====================================
+function resetWorkForm() {
+    document.getElementById("workForm").reset();
+    document.getElementById("work_id").value = "";
+}
+
+// =====================================
+// EDIT
+// =====================================
+async function editWork(id) {
+    const res = await fetch(`/api/cv/work/${id}/`);
+    const data = await res.json();
+
+    document.getElementById("work_id").value = data.id;
+    document.getElementById("company_name").value = data.company_name;
+    document.getElementById("position").value = data.position;
+    document.getElementById("start_date").value = data.start_date;
+    document.getElementById("end_date").value = data.end_date;
+
+    new bootstrap.Modal(document.getElementById("workModal")).show();
+}
+
+// =====================================
+// SAVE (CREATE / UPDATE)
+// =====================================
+async function saveWork() {
+    const id = document.getElementById("work_id").value;
+
+    const formData = new FormData(document.getElementById("workForm"));
+    const payload = Object.fromEntries(formData);
+
+    // Tanggal selesai optional
+    if (!payload.end_date || payload.end_date.trim() === "") {
+        payload.end_date = null;
+    }
+
+    let url = "/api/cv/work/";
+    let method = "POST";
+
+    if (id) {
+        url = `/api/cv/work/${id}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        alert("Data berhasil disimpan!");
+        loadWork();
+        bootstrap.Modal.getInstance(document.getElementById("workModal")).hide();
+    } else {
+        alert("Gagal menyimpan data.");
+    }
+}
+
+
+// =====================================
+// DELETE
+// =====================================
+async function deleteWork(id) {
+    if (!confirm("Hapus pekerjaan ini?")) return;
+
+    const res = await fetch(`/api/cv/work/${id}/`, {
+        method: "DELETE",
+        headers: { "X-CSRFToken": csrfToken }
+    });
+
+    if (res.ok) {
+        alert("Data berhasil dihapus!");
+        loadWork();
+    } else {
+        alert("Gagal menghapus data.");
+    }
+}
+
+// =====================================
+// GET CSRF
+// =====================================
+function getCookie(name) {
+    let cookieValue = null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+        const c = cookie.trim();
+        if (c.startsWith(name + "=")) {
+            cookieValue = c.substring(name.length + 1);
+            break;
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+
+{% endblock %}

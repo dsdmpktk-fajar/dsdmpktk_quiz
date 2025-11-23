@@ -1,0 +1,214 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Data Diri{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Profil – Data Diri" icon="user" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="profile" %}
+
+    <div class="row">
+
+        <!-- Foto profil -->
+        <div class="col-xl-4">
+            <div class="card mb-4 mb-xl-0">
+                <div class="card-header">Foto Profil</div>
+                <div class="card-body text-center">
+                    <img class="img-account-profile rounded-circle mb-2"
+                         src="{% static 'ui_theme/img/demo/user-placeholder.svg' %}" alt="Foto Profil" />
+                    <div class="small text-muted mb-4">PNG atau JPG max 5 MB</div>
+                    <button class="btn btn-primary" type="button" disabled>Upload (coming soon)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Data Diri -->
+        <div class="col-xl-8">
+            <div class="card mb-4">
+                <div class="card-header">Data Diri</div>
+                <div class="card-body">
+                    <form id="cvProfileForm">
+
+                        <!-- Nama lengkap -->
+                        <div class="mb-3">
+                            <label class="small mb-1" for="full_name">Nama Lengkap</label>
+                            <input class="form-control" id="full_name" name="full_name" type="text">
+                        </div>
+
+                        <!-- Gelar depan & belakang -->
+                        <div class="row gx-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="title_prefix">Gelar Depan</label>
+                                <input class="form-control" id="title_prefix" name="title_prefix" type="text">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="title_suffix">Gelar Belakang</label>
+                                <input class="form-control" id="title_suffix" name="title_suffix" type="text">
+                            </div>
+                        </div>
+
+                        <!-- Tempat & tanggal lahir -->
+                        <div class="row gx-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="birth_place">Tempat Lahir</label>
+                                <input class="form-control" id="birth_place" name="birth_place" type="text">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="birth_date">Tanggal Lahir</label>
+                                <input class="form-control" id="birth_date" name="birth_date" type="date">
+                            </div>
+                        </div>
+
+                        <!-- Gender & Agama -->
+                        <div class="row gx-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="gender">Jenis Kelamin</label>
+                                <select class="form-control" id="gender" name="gender">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="M">Laki-laki</option>
+                                    <option value="F">Perempuan</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="religion">Agama</label>
+                                <select class="form-control" id="religion" name="religion">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Islam">Islam</option>
+                                    <option value="Kristen Protestan">Kristen Protestan</option>
+                                    <option value="Katolik">Katolik</option>
+                                    <option value="Hindu">Hindu</option>
+                                    <option value="Buddha">Buddha</option>
+                                    <option value="Konghucu">Konghucu</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- No HP dan LinkedIn -->
+                        <div class="row gx-3 mb-3">
+
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="phone_number">Nomor HP</label>
+                                <input class="form-control" id="phone_number" name="phone_number" type="text">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="linkedin">LinkedIn</label>
+                                <input class="form-control" id="linkedin" name="linkedin" type="text">
+                            </div>
+
+                        </div>
+
+                        <!-- Tombol -->
+                        <button class="btn btn-primary" type="submit">
+                            Simpan (API belum dihubungkan)
+                        </button>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+    const form = document.getElementById("cvProfileForm");
+    let profileId = null;
+
+    // ================================
+    // 1. LOAD PROFILE DATA
+    // ================================
+    async function loadProfile() {
+        try {
+            const res = await fetch("/api/cv/profile/");
+            const data = await res.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                const profile = data[0];
+                profileId = profile.id;
+
+                // isi form dengan data API
+                for (let key in profile) {
+                    const el = form.querySelector(`[name="${key}"]`);
+                    if (el) el.value = profile[key] || "";
+                }
+            }
+        } catch (error) {
+            console.error("Error load profile:", error);
+        }
+    }
+
+    await loadProfile();
+
+    // ================================
+    // 2. SUBMIT FORM → CREATE/UPDATE
+    // ================================
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const payload = {};
+        new FormData(form).forEach((value, key) => {
+            payload[key] = value;
+        });
+
+        let url = "/api/cv/profile/";
+        let method = "POST";
+
+        // Jika profile sudah ada → update
+        if (profileId) {
+            url = `/api/cv/profile/${profileId}/`;
+            method = "PATCH";
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+                alert("Profil berhasil disimpan!");
+                await loadProfile();
+            } else {
+                alert("Gagal menyimpan profil.");
+            }
+
+        } catch (error) {
+            console.error("Error submit:", error);
+        }
+    });
+
+    // ================================
+    // UTIL → Ambil CSRF Token
+    // ================================
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + "=")) {
+                    cookieValue = cookie.substring(name.length + 1);
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+});
+</script>
+
+
+{% endblock %}

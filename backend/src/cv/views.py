@@ -193,7 +193,7 @@ class CVGeneratorViewSet(viewsets.ViewSet):
         # =============================
         # THEME PATH = cv/<theme>/index.html
         # =============================
-        template_path = f"cv/{theme}/index.html"
+        template_path = f"cv_theme/{theme}/index.html"
 
         return render_pdf(
             template_src=template_path,

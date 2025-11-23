@@ -1,0 +1,35 @@
+<nav class="nav nav-borders">
+    <a class="nav-link {% if active_tab == 'profile' %}active ms-0{% else %}ms-0{% endif %}"
+       href="{% url 'ui_cv_profile' %}">
+        Data Diri
+    </a>
+    <a class="nav-link {% if active_tab == 'education' %}active{% endif %}"
+       href="{% url 'ui_cv_education' %}">
+        Pendidikan
+    </a>
+    <a class="nav-link {% if active_tab == 'work' %}active{% endif %}"
+       href="{% url 'ui_cv_work' %}">
+        Riwayat Pekerjaan
+    </a>
+    <a class="nav-link {% if active_tab == 'skills' %}active{% endif %}"
+       href="{% url 'ui_cv_skills' %}">
+        Keahlian
+    </a>
+    <a class="nav-link {% if active_tab == 'certifications' %}active{% endif %}"
+       href="{% url 'ui_cv_certifications' %}">
+        Sertifikat
+    </a>
+    <a class="nav-link {% if active_tab == 'languages' %}active{% endif %}"
+       href="{% url 'ui_cv_languages' %}">
+        Kemampuan Bahasa
+    </a>
+    <a class="nav-link {% if active_tab == 'trainings' %}active{% endif %}"
+       href="{% url 'ui_cv_trainings' %}">
+        Riwayat Pelatihan
+    </a>
+    <a class="nav-link {% if active_tab == 'generate' %}active{% endif %}"
+       href="{% url 'ui_cv_generate' %}">
+        Generate CV
+    </a>
+</nav>
+<hr class="mt-0 mb-4" />

@@ -1,0 +1,227 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Riwayat Pelatihan{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Riwayat Pelatihan" icon="layers" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="trainings" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Daftar Riwayat Pelatihan</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#trainingModal" onclick="resetTrainingForm()">
+            + Tambah Pelatihan
+        </button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table mb-0" id="trainingTable">
+                <thead>
+                    <tr>
+                        <th>Judul</th>
+                        <th>Penyelenggara</th>
+                        <th>Periode</th>
+                        <th>Sertifikat</th>
+                        <th style="width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="trainingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Riwayat Pelatihan</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="trainingForm" enctype="multipart/form-data">
+                    <input type="hidden" name="id" id="training_id">
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Judul Pelatihan</label>
+                        <input class="form-control" name="title" id="title" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Penyelenggara</label>
+                        <input class="form-control" name="organizer" id="organizer" type="text">
+                    </div>
+
+                    <div class="row gx-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Mulai</label>
+                            <input class="form-control" name="start_date" id="start_date" type="date">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="small mb-1">Tanggal Selesai</label>
+                            <input class="form-control" name="end_date" id="end_date" type="date">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Upload Sertifikat (opsional)</label>
+                        <input class="form-control" name="certificate_file" id="certificate_file" type="file">
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button class="btn btn-primary" onclick="saveTraining()">Simpan</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", loadTrainings);
+
+let csrfToken = getCookie("csrftoken");
+
+// ================================
+// LOAD TRAINING LIST
+// ================================
+async function loadTrainings() {
+    const res = await fetch("/api/cv/trainings/");
+    const data = await res.json();
+
+    const tbody = document.querySelector("#trainingTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.title}</td>
+                <td>${item.organizer}</td>
+                <td>${item.start_date || ""} - ${item.end_date || "Sekarang"}</td>
+                <td>${item.certificate_file ? `<a href="${item.certificate_file}" target="_blank">Lihat</a>` : "-"}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning" onclick="editTraining(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTraining(${item.id})">Hapus</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// ================================
+// RESET FORM
+// ================================
+function resetTrainingForm() {
+    document.getElementById("trainingForm").reset();
+    document.getElementById("training_id").value = "";
+}
+
+// ================================
+// EDIT TRAINING
+// ================================
+async function editTraining(id) {
+    const res = await fetch(`/api/cv/trainings/${id}/`);
+    const data = await res.json();
+
+    document.getElementById("training_id").value = data.id;
+    document.getElementById("title").value = data.title;
+    document.getElementById("organizer").value = data.organizer;
+    document.getElementById("start_date").value = data.start_date;
+    document.getElementById("end_date").value = data.end_date;
+
+    new bootstrap.Modal(document.getElementById("trainingModal")).show();
+}
+
+// ================================
+// SAVE TRAINING (CREATE / UPDATE)
+// ================================
+async function saveTraining() {
+    const id = document.getElementById("training_id").value;
+
+    const form = document.getElementById("trainingForm");
+    const formData = new FormData(form);
+
+    // jika end_date kosong → null
+    if (!formData.get("end_date")) {
+        formData.set("end_date", "");
+    }
+
+    let url = "/api/cv/trainings/";
+    let method = "POST";
+
+    if (id) {
+        url = `/api/cv/trainings/${id}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        body: formData
+    });
+
+    if (res.ok) {
+        alert("Pelatihan berhasil disimpan!");
+        loadTrainings();
+        bootstrap.Modal.getInstance(document.getElementById("trainingModal")).hide();
+    } else {
+        alert("Gagal menyimpan pelatihan.");
+    }
+}
+
+// ================================
+// DELETE
+// ================================
+async function deleteTraining(id) {
+    if (!confirm("Hapus pelatihan ini?")) return;
+
+    const res = await fetch(`/api/cv/trainings/${id}/`, {
+        method: "DELETE",
+        headers: { "X-CSRFToken": csrfToken }
+    });
+
+    if (res.ok) {
+        alert("Berhasil dihapus!");
+        loadTrainings();
+    } else {
+        alert("Gagal menghapus pelatihan.");
+    }
+}
+
+// ================================
+// GET CSRF
+// ================================
+function getCookie(name) {
+    let cookieValue = null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+        const c = cookie.trim();
+        if (c.startsWith(name + "=")) {
+            cookieValue = c.substring(name.length + 1);
+            break;
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+{% endblock %}

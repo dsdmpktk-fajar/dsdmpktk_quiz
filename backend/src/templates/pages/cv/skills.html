@@ -1,0 +1,217 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Keahlian{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Keahlian" icon="star" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="skills" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Daftar Keahlian</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#skillsModal" onclick="resetSkillForm()">
+            + Tambah Keahlian
+        </button>
+    </div>
+
+    <!-- TABEL -->
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table mb-0" id="skillsTable">
+                <thead>
+                    <tr>
+                        <th>Nama Keahlian</th>
+                        <th>Kategori</th>
+                        <th>Tingkat</th>
+                        <th style="width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="skillsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Keahlian</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="skillsForm">
+
+                    <input type="hidden" id="skill_id" name="id">
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Nama Keahlian</label>
+                        <input class="form-control" name="skill_name" id="skill_name" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Kategori (opsional)</label>
+                        <input class="form-control" name="category" id="category" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Tingkat Keahlian</label>
+                        <select class="form-control" name="level" id="level">
+                            <option value="">-- Pilih --</option>
+                            <option value="Basic">Dasar</option>
+                            <option value="Intermediate">Menengah</option>
+                            <option value="Advanced">Mahir</option>
+                            <option value="Expert">Ahli</option>
+                        </select>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button class="btn btn-primary" onclick="saveSkill()">Simpan</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", loadSkills);
+
+let csrfToken = getCookie("csrftoken");
+
+// =====================================
+// LOAD SKILLS
+// =====================================
+async function loadSkills() {
+    const res = await fetch("/api/cv/skills/");
+    const data = await res.json();
+
+    const tbody = document.querySelector("#skillsTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.skill_name}</td>
+                <td>${item.category || "-"}</td>
+                <td>${item.level}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning" onclick="editSkill(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSkill(${item.id})">Hapus</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// =====================================
+// RESET FORM
+// =====================================
+function resetSkillForm() {
+    document.getElementById("skillsForm").reset();
+    document.getElementById("skill_id").value = "";
+}
+
+// =====================================
+// EDIT SKILL
+// =====================================
+async function editSkill(id) {
+    const res = await fetch(`/api/cv/skills/${id}/`);
+    const data = await res.json();
+
+    document.getElementById("skill_id").value = data.id;
+    document.getElementById("skill_name").value = data.skill_name;
+    document.getElementById("category").value = data.category;
+    document.getElementById("level").value = data.level;
+
+    new bootstrap.Modal(document.getElementById("skillsModal")).show();
+}
+
+// =====================================
+// SAVE (CREATE OR UPDATE)
+// =====================================
+async function saveSkill() {
+    const id = document.getElementById("skill_id").value;
+
+    const formData = new FormData(document.getElementById("skillsForm"));
+    const payload = Object.fromEntries(formData);
+
+    let url = "/api/cv/skills/";
+    let method = "POST";
+
+    if (id) {
+        url = `/api/cv/skills/${id}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        alert("Keahlian berhasil disimpan!");
+        loadSkills();
+        bootstrap.Modal.getInstance(document.getElementById("skillsModal")).hide();
+    } else {
+        alert("Gagal menyimpan data.");
+    }
+}
+
+// =====================================
+// DELETE SKILL
+// =====================================
+async function deleteSkill(id) {
+    if (!confirm("Hapus keahlian ini?")) return;
+
+    const res = await fetch(`/api/cv/skills/${id}/`, {
+        method: "DELETE",
+        headers: { "X-CSRFToken": csrfToken }
+    });
+
+    if (res.ok) {
+        alert("Berhasil dihapus!");
+        loadSkills();
+    } else {
+        alert("Gagal menghapus!");
+    }
+}
+
+// =====================================
+// GET CSRF
+// =====================================
+function getCookie(name) {
+    let cookieValue = null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+        const c = cookie.trim();
+        if (c.startsWith(name + "=")) {
+            cookieValue = c.substring(name.length + 1);
+            break;
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+
+{% endblock %}

@@ -36,6 +36,7 @@ def api_root(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
+    path('', include('frontend.urls')),
 
     # 🎯 Inilah route yang membuat /api/ tidak 404 lagi
     path('api/', api_root, name="api-root"),

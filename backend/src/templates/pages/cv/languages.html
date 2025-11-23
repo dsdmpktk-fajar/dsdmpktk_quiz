@@ -1,0 +1,208 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Kemampuan Bahasa{% endblock %}
+
+{% block content %}
+
+{% include "pages/cv/page_title.html" with title="Kemampuan Bahasa" icon="message-circle" %}
+
+<div class="container-xl px-4">
+
+    {% include "pages/cv/_nav.html" with active_tab="languages" %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Daftar Bahasa</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#languageModal" onclick="resetLanguageForm()">
+            + Tambah Bahasa
+        </button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table mb-0" id="languageTable">
+                <thead>
+                    <tr>
+                        <th>Bahasa</th>
+                        <th>Tingkat</th>
+                        <th style="width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="languageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Bahasa</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="languageForm">
+                    <input type="hidden" name="id" id="lang_id">
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Bahasa</label>
+                        <input class="form-control" name="language" id="language" type="text">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small mb-1">Tingkat Kemampuan</label>
+                        <select class="form-control" name="proficiency" id="proficiency">
+                            <option value="">-- Pilih --</option>
+                            <option value="Basic">Dasar</option>
+                            <option value="Intermediate">Menengah</option>
+                            <option value="Advanced">Mahir</option>
+                            <option value="Fluent">Fasih</option>
+                            <option value="Native">Penutur Asli</option>
+                        </select>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button class="btn btn-primary" onclick="saveLanguage()">Simpan</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", loadLanguages);
+
+let csrfToken = getCookie("csrftoken");
+
+// ========================================
+// LOAD DATA
+// ========================================
+async function loadLanguages() {
+    const res = await fetch("/api/cv/languages/");
+    const data = await res.json();
+
+    const tbody = document.querySelector("#languageTable tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(item => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.language}</td>
+                <td>${item.proficiency}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-warning" onclick="editLanguage(${item.id})">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteLanguage(${item.id})">Hapus</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// ========================================
+// RESET FORM
+// ========================================
+function resetLanguageForm() {
+    document.getElementById("languageForm").reset();
+    document.getElementById("lang_id").value = "";
+}
+
+// ========================================
+// EDIT
+// ========================================
+async function editLanguage(id) {
+    const res = await fetch(`/api/cv/languages/${id}/`);
+    const data = await res.json();
+
+    document.getElementById("lang_id").value = data.id;
+    document.getElementById("language").value = data.language;
+    document.getElementById("proficiency").value = data.proficiency;
+
+    new bootstrap.Modal(document.getElementById("languageModal")).show();
+}
+
+// ========================================
+// SAVE (CREATE / UPDATE)
+// ========================================
+async function saveLanguage() {
+    const id = document.getElementById("lang_id").value;
+
+    const formData = new FormData(document.getElementById("languageForm"));
+    const payload = Object.fromEntries(formData);
+
+    let url = "/api/cv/languages/";
+    let method = "POST";
+
+    if (id) {
+        url = `/api/cv/languages/${id}/`;
+        method = "PATCH";
+    }
+
+    const res = await fetch(url, {
+        method: method,
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+        alert("Bahasa berhasil disimpan!");
+        loadLanguages();
+        bootstrap.Modal.getInstance(document.getElementById("languageModal")).hide();
+    } else {
+        alert("Gagal menyimpan bahasa.");
+    }
+}
+
+// ========================================
+// DELETE
+// ========================================
+async function deleteLanguage(id) {
+    if (!confirm("Hapus bahasa ini?")) return;
+
+    const res = await fetch(`/api/cv/languages/${id}/`, {
+        method: "DELETE",
+        headers: { "X-CSRFToken": csrfToken }
+    });
+
+    if (res.ok) {
+        alert("Berhasil dihapus!");
+        loadLanguages();
+    } else {
+        alert("Gagal menghapus bahasa.");
+    }
+}
+
+// ========================================
+// GET CSRF
+// ========================================
+function getCookie(name) {
+    let cookieValue = null;
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+        const c = cookie.trim();
+        if (c.startsWith(name + "=")) {
+            cookieValue = c.substring(name.length + 1);
+            break;
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+
+{% endblock %}
