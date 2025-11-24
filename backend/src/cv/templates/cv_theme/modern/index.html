@@ -1,165 +1,102 @@
+{% load indo_format %}
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <style>
-
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            color: #222;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* SIDEBAR KIRI */
-        .sidebar {
-            width: 30%;
-            background: #f3f3f3;
-            padding: 25px;
-        }
-
-        .name {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .contact {
-            font-size: 11px;
-            color: #555;
-            margin-bottom: 20px;
-            line-height: 1.4;
-        }
-
-        .section-title {
-            font-size: 12.5px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-top: 20px;
-            margin-bottom: 8px;
-        }
-
-        .skill-badge {
-            display: inline-block;
-            background: #ddd;
-            padding: 3px 6px;
-            margin: 2px 2px 4px 0;
-            border-radius: 4px;
-            font-size: 10.5px;
-        }
-
-        /* BAGIAN KANAN */
-        .main {
-            width: 70%;
-            padding: 35px;
-        }
-
-        .main-section-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 4px;
-            text-transform: uppercase;
-        }
-
-        .item {
-            margin-bottom: 15px;
-        }
-
-        .item-title {
-            font-weight: bold;
-            font-size: 12.5px;
-        }
-
-        .item-sub {
-            font-style: italic;
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        ul {
-            margin: 5px 0 15px 20px;
-        }
-
-    </style>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL_ABS }}cv_theme/modern/style.css">
 </head>
+
 <body>
 
-<div class="container">
+<div class="left-column">
+    <h1>{{ profile.full_name }}</h1>
 
-    <!-- LEFT SIDEBAR -->
-    <div class="sidebar">
-        <div class="name">{{ profile.full_name }}</div>
+    {% if profile.current_position %}
+    <div class="headline">{{ profile.current_position }}</div>
+    {% endif %}
 
-        <div class="contact">
-            {% if profile.email %} {{ profile.email }}<br> {% endif %}
-            {% if profile.phone %} {{ profile.phone }}<br> {% endif %}
-            {% if profile.address %} {{ profile.address }}<br> {% endif %}
+    <div class="section">
+        <h2>Kontak</h2>
+        {% if profile.email %}<p>{{ profile.email }}</p>{% endif %}
+        {% if profile.phone_number %}<p>{{ profile.phone_number }}</p>{% endif %}
+        {% if profile.birth_place and profile.birth_date %}
+        <p>{{ profile.birth_place }}, {{ profile.birth_date|indo_date }}</p>
+        {% endif %}
+    </div>
+
+    {% if skills %}
+    <div class="section">
+        <h2>Keahlian</h2>
+        {% for sk in skills %}
+        <p class="skill">{{ sk.skill_name }} ({{ sk.get_level_display }})</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if languages %}
+    <div class="section">
+        <h2>Bahasa</h2>
+        {% for ln in languages %}
+        <p>{{ ln.language }} — {{ ln.get_proficiency_display }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- RIGHT COLUMN -->
+<div class="right-column">
+
+    {% if profile.summary %}
+    <h2>Ringkasan</h2>
+    <p>{{ profile.summary }}</p>
+    {% endif %}
+
+    {% if work %}
+    <h2>Pengalaman Kerja</h2>
+    {% for job in work %}
+    <div class="entry">
+        <strong>{{ job.position }}</strong> – {{ job.company_name }}
+        <div class="date">
+            {{ job.start_date|indo_date }} – {{ job.end_date|indo_date|default:"Sekarang" }}
         </div>
-
-        {% if skills %}
-            <div class="section-title">Keahlian</div>
-            {% for sk in skills %}
-                <div class="skill-badge">{{ sk.name }}</div>
-            {% endfor %}
-        {% endif %}
-
-        {% if languages %}
-            <div class="section-title">Bahasa</div>
-            <ul>
-                {% for lg in languages %}
-                    <li>{{ lg.language }} ({{ lg.level }})</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
-        {% if certs %}
-            <div class="section-title">Sertifikasi</div>
-            {% for cert in certs %}
-                <div>{{ cert.name }} ({{ cert.year }})</div>
-            {% endfor %}
-        {% endif %}
+        {% if job.description %}<p>{{ job.description }}</p>{% endif %}
     </div>
+    {% endfor %}
+    {% endif %}
 
-    <!-- RIGHT MAIN SECTION -->
-    <div class="main">
-
-        {% if profile.summary %}
-            <div class="main-section-title">Ringkasan</div>
-            <p>{{ profile.summary }}</p>
-        {% endif %}
-
-        {% if work %}
-            <div class="main-section-title">Pengalaman Kerja</div>
-            {% for job in work %}
-                <div class="item">
-                    <div class="item-title">{{ job.job_title }}</div>
-                    <div class="item-sub">{{ job.company }} — {{ job.start_date }} hingga {{ job.end_date }}</div>
-                    <div>{{ job.description }}</div>
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        {% if education %}
-            <div class="main-section-title">Pendidikan</div>
-            {% for edu in education %}
-                <div class="item">
-                    <div class="item-title">{{ edu.degree }} - {{ edu.school }}</div>
-                    <div class="item-sub">{{ edu.start_year }} — {{ edu.end_year }}</div>
-                </div>
-            {% endfor %}
-        {% endif %}
+    {% if education %}
+    <h2>Pendidikan</h2>
+    {% for edu in education %}
+    <div class="entry">
+        <strong>{{ edu.get_degree_display }}</strong> – {{ edu.institution_name }}
+        <div class="date">
+            {{ edu.year_in }} – {{ edu.year_out|default:"Sekarang" }}
+        </div>
     </div>
+    {% endfor %}
+    {% endif %}
 
+    {% if certs %}
+    <h2>Sertifikasi</h2>
+    {% for cert in certs %}
+    <div class="entry">
+        <strong>{{ cert.name }}</strong> – {{ cert.issuer }}
+        <div class="date">{{ cert.issue_date|indo_date }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if trainings %}
+    <h2>Pelatihan</h2>
+    {% for tr in trainings %}
+    <div class="entry">
+        <strong>{{ tr.title }}</strong> – {{ tr.organizer }}
+        <div class="date">
+            {{ tr.start_date|indo_date }} – {{ tr.end_date|indo_date }}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 </div>
 
 </body>

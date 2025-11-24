@@ -1,0 +1,120 @@
+@page {
+    size: A4;
+    margin: 2.2cm;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Lato', sans-serif;
+    background: white;
+    color: #222;
+    font-size: 14px;
+    line-height: 24px;
+}
+
+.container {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+/* ============================
+   HEADER
+============================ */
+.header {
+    margin-bottom: 32px;
+}
+
+.full-name {
+    font-size: 36px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.contact-info {
+    margin-bottom: 20px;
+}
+
+.email, .phone {
+    font-weight: 300;
+    color: #666;
+}
+
+.separator {
+    height: 12px;
+    border-left: 2px solid #aaa;
+    margin: 0 10px;
+}
+
+.position {
+    font-weight: bold;
+    text-decoration: underline;
+    margin-right: 10px;
+    font-size: 15px;
+}
+
+.desc {
+    color: #444;
+}
+
+/* ============================
+   SECTION
+============================ */
+.section {
+    margin-bottom: 32px;
+}
+
+.section__title {
+    text-transform: uppercase;
+    color: #54AFE4;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+/* ============================
+   TWO-COLUMN ITEM
+============================ */
+
+.section__list-item,
+.skills__item {
+    margin-bottom: 20px;
+}
+
+.left,
+.right {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.left {
+    width: 60%;
+}
+
+.right {
+    width: 38%;
+    text-align: right;
+}
+
+.name {
+    font-weight: 700;
+}
+
+.addr {
+    color: #444;
+}
+
+.duration {
+    color: #777;
+    font-size: 13px;
+}
+
+/* Skills */
+.skills__item .desc {
+    color: #333;
+}

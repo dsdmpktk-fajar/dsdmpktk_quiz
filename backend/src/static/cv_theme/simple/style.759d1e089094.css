@@ -1,0 +1,113 @@
+@page {
+    size: A4;
+    margin: 2.5cm;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Lato', sans-serif;
+    background: #fff;
+    font-size: 14px;
+    color: #222;
+    line-height: 24px;
+}
+
+.container {
+    max-width: 700px;
+    margin: auto;
+}
+
+/* HEADER ---------------------------------------- */
+.header {
+    margin-bottom: 30px;
+}
+
+.full-name {
+    font-size: 36px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.contact-info {
+    margin-bottom: 20px;
+}
+
+.email,
+.phone {
+    font-weight: 300;
+    color: #777;
+}
+
+.separator {
+    height: 12px;
+    border-left: 2px solid #999;
+    margin: 0 10px;
+}
+
+.position {
+    font-weight: bold;
+    text-decoration: underline;
+    margin-right: 10px;
+}
+
+.desc {
+    color: #444;
+}
+
+/* SECTIONS ---------------------------------------- */
+.details .section {
+    margin-bottom: 36px;
+}
+
+.section__title {
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #54AFE4;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+}
+
+.section__list-item {
+    margin-bottom: 28px;
+}
+
+/* TWO-COLUMN GRID -------------------------------- */
+.left,
+.right {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.left {
+    width: 60%;
+}
+
+.right {
+    width: 38%;
+    text-align: right;
+}
+
+/* TEXT STYLES ------------------------------------ */
+.name {
+    font-weight: bold;
+}
+
+.addr {
+    color: #444;
+    font-size: 13px;
+}
+
+.duration {
+    color: #555;
+    font-size: 13px;
+}
+
+.skills__item {
+    margin-bottom: 12px;
+}

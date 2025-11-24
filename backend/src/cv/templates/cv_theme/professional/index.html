@@ -1,193 +1,145 @@
+{% load indo_format %}
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            padding: 35px;
-            color: #222;
-            line-height: 1.45;
-        }
-
-        h1 {
-            font-size: 22px;
-            margin-bottom: 3px;
-        }
-
-        .subheadline {
-            font-size: 12px;
-            color: #555;
-            margin-bottom: 15px;
-        }
-
-        .contact {
-            margin-bottom: 25px;
-            font-size: 11.5px;
-            color: #444;
-        }
-
-        .section-title {
-            font-size: 13.5px;
-            font-weight: bold;
-            margin-top: 25px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 4px;
-        }
-
-        .item {
-            margin-bottom: 18px;
-        }
-
-        .item-header {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .item-title {
-            font-weight: bold;
-            font-size: 12.5px;
-        }
-
-        .item-company {
-            font-size: 12px;
-            color: #555;
-        }
-
-        .item-date {
-            font-size: 11px;
-            color: #777;
-            text-align: right;
-        }
-
-        ul {
-            margin: 5px 0 15px 20px;
-        }
-
-        .achievement {
-            margin-bottom: 6px;
-        }
-
-        .skill-list {
-            margin-top: 10px;
-        }
-
-        .skill-badge {
-            display: inline-block;
-            background: #eee;
-            padding: 3px 7px;
-            margin: 2px;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-
-    </style>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL_ABS }}cv_theme/professional/style.css">
 </head>
+
 <body>
 
-    <!-- HEADER -->
+    <!-- ======================
+         HEADER
+    ======================= -->
     <h1>{{ profile.full_name }}</h1>
 
     {% if profile.current_position %}
         <div class="subheadline">{{ profile.current_position }}</div>
     {% endif %}
 
-    <div class="contact">
-        {% if profile.email %} {{ profile.email }} | {% endif %}
-        {% if profile.phone %} {{ profile.phone }} | {% endif %}
-        {% if profile.address %} {{ profile.address }} {% endif %}
+    <div class="contact-info">
+        {% if profile.email %} {{ profile.email }}{% endif %}
+        {% if profile.phone_number %} • {{ profile.phone_number }}{% endif %}
+        {% if profile.birth_place and profile.birth_date %}
+            • {{ profile.birth_place }}, {{ profile.birth_date|indo_date }}
+        {% endif %}
     </div>
 
-    <!-- SUMMARY -->
     {% if profile.summary %}
         <div class="section-title">Ringkasan Profesional</div>
         <p>{{ profile.summary }}</p>
     {% endif %}
 
-    <!-- WORK EXPERIENCE -->
+    <!-- ======================
+         PENGALAMAN KERJA
+    ======================= -->
     {% if work %}
-        <div class="section-title">Pengalaman Kerja</div>
-        {% for job in work %}
+    <div class="section-title">Pengalaman Kerja</div>
+
+    {% for job in work %}
         <div class="item">
             <div class="item-header">
-                <div>
-                    <div class="item-title">{{ job.job_title }}</div>
-                    <div class="item-company">{{ job.company }}</div>
-                </div>
+                <div class="item-title">{{ job.position }}</div>
+                <div class="item-company">{{ job.company_name }}</div>
                 <div class="item-date">
-                    {{ job.start_date }} — {{ job.end_date }}
+                    {{ job.start_date|indo_date }} - {{ job.end_date|indo_date|default:"Sekarang" }}
                 </div>
             </div>
 
             {% if job.description %}
-            <div class="achievement">
-                {{ job.description }}
-            </div>
+            <p>{{ job.description }}</p>
             {% endif %}
         </div>
-        {% endfor %}
+    {% endfor %}
     {% endif %}
 
-    <!-- ACHIEVEMENTS (Optional Section) -->
-    {% if achievements %}
-        <div class="section-title">Pencapaian Utama</div>
-        <ul>
-            {% for ach in achievements %}
-                <li>{{ ach.description }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    <!-- EDUCATION -->
+    <!-- ======================
+         PENDIDIKAN
+    ======================= -->
     {% if education %}
-        <div class="section-title">Pendidikan</div>
-        {% for edu in education %}
+    <div class="section-title">Pendidikan</div>
+
+    {% for edu in education %}
         <div class="item">
             <div class="item-header">
-                <div class="item-title">{{ edu.degree }} - {{ edu.school }}</div>
-                <div class="item-date">{{ edu.start_year }} - {{ edu.end_year }}</div>
+                <div class="item-title">
+                    {{ edu.get_degree_display }} - {{ edu.institution_name }}
+                </div>
+                <div class="item-date">
+                    {{ edu.year_in }} - {{ edu.year_out|default:"Sekarang" }}
+                </div>
             </div>
         </div>
-        {% endfor %}
+    {% endfor %}
     {% endif %}
 
-    <!-- SKILLS -->
+    <!-- ======================
+         KEAHLIAN
+    ======================= -->
     {% if skills %}
-        <div class="section-title">Keahlian Profesional</div>
-        <div class="skill-list">
-            {% for sk in skills %}
-                <span class="skill-badge">{{ sk.name }}</span>
-            {% endfor %}
-        </div>
+    <div class="section-title">Keahlian</div>
+
+    <div class="skill-list">
+        {% for sk in skills %}
+            <span class="skill-badge">
+                {{ sk.skill_name }} ({{ sk.get_level_display }})
+            </span>
+        {% endfor %}
+    </div>
     {% endif %}
 
-    <!-- CERTIFICATIONS -->
+    <!-- ======================
+         SERTIFIKASI
+    ======================= -->
     {% if certs %}
-        <div class="section-title">Sertifikasi</div>
-        {% for cert in certs %}
-            <div class="item">
-                <div class="item-header">
-                    <div class="item-title">{{ cert.name }}</div>
-                    <div class="item-date">{{ cert.year }}</div>
-                </div>
+    <div class="section-title">Sertifikasi</div>
+
+    {% for cert in certs %}
+        <div class="item">
+            <div class="item-header">
+                <div class="item-title">{{ cert.name }}</div>
+                <div class="item-date">{{ cert.issue_date|indo_date }}</div>
             </div>
-        {% endfor %}
+
+            {% if cert.issuer %}
+            <div class="cert-issuer">{{ cert.issuer }}</div>
+            {% endif %}
+        </div>
+    {% endfor %}
     {% endif %}
 
-    <!-- TRAINING -->
+    <!-- ======================
+         BAHASA
+    ======================= -->
+    {% if languages %}
+    <div class="section-title">Bahasa</div>
+
+    {% for ln in languages %}
+        <div class="item">
+            <div class="item-header">
+                <div class="item-title">{{ ln.language }}</div>
+                <div class="item-date">{{ ln.get_proficiency_display }}</div>
+            </div>
+        </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- ======================
+         PELATIHAN
+    ======================= -->
     {% if trainings %}
-        <div class="section-title">Pelatihan & Kursus</div>
-        {% for tr in trainings %}
-            <div class="item">
-                <div class="item-header">
-                    <div class="item-title">{{ tr.name }}</div>
-                    <div class="item-date">{{ tr.year }}</div>
+    <div class="section-title">Pelatihan</div>
+
+    {% for tr in trainings %}
+        <div class="item">
+            <div class="item-header">
+                <div class="item-title">{{ tr.title }} – {{ tr.organizer }}</div>
+                <div class="item-date">
+                    {{ tr.start_date|indo_date }} – {{ tr.end_date|indo_date|default:"Sekarang" }}
                 </div>
             </div>
-        {% endfor %}
+        </div>
+    {% endfor %}
     {% endif %}
 
 </body>

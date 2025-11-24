@@ -1,0 +1,142 @@
+{% load indo_format %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL_ABS }}cv_theme/creative/style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER CARD -->
+    <div class="card card-header-main">
+        <div class="header-top">
+            <div>
+                <h1 class="name">{{ profile.full_name }}</h1>
+                {% if profile.current_position %}
+                <div class="position">{{ profile.current_position }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="header-bottom">
+            <div class="contact-block">
+                {% if profile.email %}
+                    <div class="contact-item">{{ profile.email }}</div>
+                {% endif %}
+                {% if profile.phone_number %}
+                    <div class="contact-item">{{ profile.phone_number }}</div>
+                {% endif %}
+                {% if profile.birth_place and profile.birth_date %}
+                    <div class="contact-item">
+                        {{ profile.birth_place }}, {{ profile.birth_date|indo_date }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- RINGKASAN -->
+    {% if profile.summary %}
+    <div class="card">
+        <div class="card-title">Tentang Saya</div>
+        <p>{{ profile.summary }}</p>
+    </div>
+    {% endif %}
+
+    <!-- PENGALAMAN -->
+    {% if work %}
+    <div class="card">
+        <div class="card-title">Pengalaman Kerja</div>
+
+        {% for job in work %}
+        <div class="entry">
+            <div class="entry-header">
+                <div class="entry-main">
+                    <div class="entry-title">{{ job.position }}</div>
+                    <div class="entry-sub">{{ job.company_name }}</div>
+                </div>
+                <div class="entry-date">
+                    {{ job.start_date|indo_date }} – {{ job.end_date|indo_date|default:"Sekarang" }}
+                </div>
+            </div>
+            {% if job.description %}
+            <p class="entry-desc">{{ job.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- PENDIDIKAN -->
+    {% if education %}
+    <div class="card">
+        <div class="card-title">Pendidikan</div>
+
+        {% for edu in education %}
+        <div class="entry">
+            <div class="entry-header">
+                <div class="entry-main">
+                    <div class="entry-title">{{ edu.get_degree_display }}</div>
+                    <div class="entry-sub">{{ edu.institution_name }}</div>
+                </div>
+                <div class="entry-date">
+                    {{ edu.year_in }} – {{ edu.year_out|default:"Sekarang" }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- KEAHLIAN -->
+    {% if skills %}
+    <div class="card">
+        <div class="card-title">Keahlian</div>
+        <ul class="tag-list">
+            {% for sk in skills %}
+            <li>{{ sk.skill_name }} ({{ sk.get_level_display }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- BAHASA -->
+    {% if languages %}
+    <div class="card">
+        <div class="card-title">Bahasa</div>
+        <ul class="tag-list">
+            {% for ln in languages %}
+            <li>{{ ln.language }} — {{ ln.get_proficiency_display }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- PELATIHAN -->
+    {% if trainings %}
+    <div class="card">
+        <div class="card-title">Pelatihan</div>
+
+        {% for tr in trainings %}
+        <div class="entry">
+            <div class="entry-header">
+                <div class="entry-main">
+                    <div class="entry-title">{{ tr.title }}</div>
+                    <div class="entry-sub">{{ tr.organizer }}</div>
+                </div>
+                <div class="entry-date">
+                    {{ tr.start_date|indo_date }} – {{ tr.end_date|indo_date }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>

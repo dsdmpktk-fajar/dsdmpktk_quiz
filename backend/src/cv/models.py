@@ -51,7 +51,7 @@ class Education(models.Model):
     gpa = models.FloatField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.degree} - {self.institution}"
+        return f"{self.degree} - {self.institution_name}"
 
 
 # =======================
@@ -65,7 +65,7 @@ class WorkExperience(models.Model):
     end_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.position} @ {self.company}"
+        return f"{self.position} @ {self.company_name}"
 
 
 # =======================
@@ -124,7 +124,7 @@ class TrainingHistory(models.Model):
     title = models.CharField(max_length=255)
     organizer = models.CharField(max_length=255)
     start_date = models.DateField()
-    end_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
     certificate_file = models.FileField(upload_to='training_certificates/', blank=True, null=True)
 
     def __str__(self):

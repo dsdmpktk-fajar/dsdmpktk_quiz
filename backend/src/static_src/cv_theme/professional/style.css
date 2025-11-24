@@ -1,0 +1,94 @@
+@page {
+    size: A4;
+    margin: 2cm;
+}
+
+/* Global text style */
+body {
+    font-family: "Helvetica", "Arial", sans-serif;
+    font-size: 12px;
+    color: #222;
+    line-height: 1.5;
+}
+
+/* Name */
+h1 {
+    font-size: 28px;
+    margin: 0;
+    font-weight: 700;
+    color: #111;
+}
+
+/* Position under name */
+.subheadline {
+    font-size: 14px;
+    margin-top: 4px;
+    margin-bottom: 10px;
+    color: #444;
+}
+
+/* Contact info */
+.contact-info {
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 22px;
+}
+
+/* Section title */
+.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 28px;
+    margin-bottom: 10px;
+    color: #0a3d62;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Content items */
+.item {
+    margin-bottom: 14px;
+}
+
+.item-header {
+    width: 100%;
+}
+
+.item-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #111;
+}
+
+.item-company {
+    font-size: 12px;
+    color: #444;
+}
+
+.item-date {
+    font-size: 11px;
+    color: #666;
+}
+
+/* Skills */
+.skill-list {
+    margin-top: 6px;
+}
+
+.skill-badge {
+    display: inline-block;
+    background: #e8f0ff;
+    color: #0a3d62;
+    padding: 4px 8px;
+    margin: 2px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+/* Certifications */
+.cert-issuer {
+    font-size: 11px;
+    color: #555;
+}

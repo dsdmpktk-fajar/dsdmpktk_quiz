@@ -1,0 +1,108 @@
+{% load socialaccount %}
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Create Account - LEAP UNPAD</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="{% static 'ui_theme/css/styles.css' %}" rel="stylesheet">
+</head>
+<body class="bg-primary">
+  <div id="layoutAuthentication">
+    <div id="layoutAuthentication_content">
+      <main>
+        <div class="container-xl px-4">
+          <div class="row justify-content-center">
+            <div class="col-xl-8 col-lg-9">
+              <div class="card my-5 shadow-lg">
+                <div class="card-body p-5 text-center">
+                  <div class="h3 fw-light mb-3">Create an Account</div>
+                  <div class="small text-muted mb-2">Sign up using a social account</div>
+
+                  <a class="btn btn-icon btn-google mx-1" href="{% provider_login_url 'google' process='login' %}">
+                    <i class="fab fa-google fa-fw fa-sm"></i>
+                  </a>
+                </div>
+
+                <hr class="my-0"/>
+
+                <div class="card-body p-5">
+                  {% if form.errors %}
+                    <div class="alert alert-danger">
+                      <ul class="mb-0">
+                        {% for field in form %}
+                          {% for err in field.errors %}
+                            <li>{{ err }}</li>
+                          {% endfor %}
+                        {% endfor %}
+                        {% for err in form.non_field_errors %}
+                          <li>{{ err }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
+
+                  <form method="post" action="{% url 'account_signup' %}">
+                    {% csrf_token %}
+
+                    <!-- optional first/last: render only if present in form -->
+                    {% if form.first_name %}
+                      <div class="row gx-3">
+                        <div class="col-md-6 mb-3">
+                          <label class="text-gray-600 small">First name</label>
+                          <input name="first_name" class="form-control form-control-solid" placeholder="First name" value="{{ form.first_name.value|default_if_none:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <label class="text-gray-600 small">Last name</label>
+                          <input name="last_name" class="form-control form-control-solid" placeholder="Last name" value="{{ form.last_name.value|default_if_none:'' }}">
+                        </div>
+                      </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                      <label class="text-gray-600 small">Email address</label>
+                      <input name="email" type="email" class="form-control form-control-solid" placeholder="you@example.com" value="{{ form.email.value|default_if_none:'' }}">
+                    </div>
+
+                    <div class="row gx-3">
+                      <div class="col-md-6 mb-3">
+                        <label class="text-gray-600 small">Password</label>
+                        <input name="password1" type="password" class="form-control form-control-solid" placeholder="Choose a password">
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="text-gray-600 small">Confirm Password</label>
+                        <input name="password2" type="password" class="form-control form-control-solid" placeholder="Repeat password">
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="form-check">
+                        <input class="form-check-input" id="checkTerms" type="checkbox" required>
+                        <label class="form-check-label small" for="checkTerms">
+                          I accept the <a href="#!">terms & conditions</a>.
+                        </label>
+                      </div>
+                      <button class="btn btn-primary" type="submit">Create Account</button>
+                    </div>
+                  </form>
+                </div>
+
+                <hr class="my-0"/>
+                <div class="card-body px-5 py-4 text-center">
+                  <div class="small">Have an account? <a href="{% url 'account_login' %}">Sign in!</a></div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'ui_theme/js/scripts.js' %}"></script>
+  <script>feather.replace();</script>
+</body>
+</html>

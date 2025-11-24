@@ -1,0 +1,123 @@
+{% load indo_format %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ STATIC_URL_ABS }}cv_theme/corporate/style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="left-info">
+            <h1 class="name">{{ profile.full_name }}</h1>
+            {% if profile.current_position %}
+            <div class="position">{{ profile.current_position }}</div>
+            {% endif %}
+        </div>
+
+        <div class="right-info">
+            {% if profile.email %}<p>{{ profile.email }}</p>{% endif %}
+            {% if profile.phone_number %}<p>{{ profile.phone_number }}</p>{% endif %}
+            {% if profile.birth_place and profile.birth_date %}
+                <p>{{ profile.birth_place }}, {{ profile.birth_date|indo_date }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    {% if profile.summary %}
+    <div class="section">
+        <div class="section-title">Ringkasan Profesional</div>
+        <p>{{ profile.summary }}</p>
+    </div>
+    {% endif %}
+
+    <!-- WORK EXPERIENCE -->
+    {% if work %}
+    <div class="section">
+        <div class="section-title">Pengalaman Kerja</div>
+
+        {% for job in work %}
+        <div class="item">
+            <div class="item-header">
+                <span class="item-title">{{ job.position }}</span>
+                <span class="item-date">
+                    {{ job.start_date|indo_date }} - {{ job.end_date|indo_date|default:"Sekarang" }}
+                </span>
+            </div>
+            <div class="item-subtitle">{{ job.company_name }}</div>
+
+            {% if job.description %}
+            <p class="desc">{{ job.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- EDUCATION -->
+    {% if education %}
+    <div class="section">
+        <div class="section-title">Pendidikan</div>
+
+        {% for edu in education %}
+        <div class="item">
+            <div class="item-header">
+                <span class="item-title">{{ edu.get_degree_display }} — {{ edu.institution_name }}</span>
+                <span class="item-date">
+                    {{ edu.year_in }} - {{ edu.year_out|default:"Sekarang" }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- SKILLS -->
+    {% if skills %}
+    <div class="section">
+        <div class="section-title">Keahlian</div>
+        <ul class="list">
+        {% for sk in skills %}
+            <li>{{ sk.skill_name }} — {{ sk.get_level_display }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- LANGUAGES -->
+    {% if languages %}
+    <div class="section">
+        <div class="section-title">Bahasa</div>
+        <ul class="list">
+        {% for ln in languages %}
+            <li>{{ ln.language }} — {{ ln.get_proficiency_display }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- TRAININGS -->
+    {% if trainings %}
+    <div class="section">
+        <div class="section-title">Pelatihan</div>
+
+        {% for tr in trainings %}
+        <div class="item">
+            <div class="item-header">
+                <span class="item-title">{{ tr.title }} — {{ tr.organizer }}</span>
+                <span class="item-date">{{ tr.start_date|indo_date }} — {{ tr.end_date|indo_date }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+</body>
+</html>

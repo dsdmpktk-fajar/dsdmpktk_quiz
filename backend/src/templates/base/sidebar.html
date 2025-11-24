@@ -5,16 +5,18 @@
         <div class="sidenav-menu">
             <div class="nav accordion" id="accordionSidenav">
 
-                <!-- Heading -->
+                <!-- DASHBOARD -->
+                <a class="nav-link" href="{% url 'dashboard' %}">
+                    <div class="nav-link-icon"><i data-feather="home"></i></div>
+                    Dashboard
+                </a>
+
+                <!-- HEADING -->
                 <div class="sidenav-menu-heading">Data Diri</div>
 
-                <!-- Collapsible Menu -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse"
-                   data-bs-target="#collapseProfile" aria-expanded="false"
-                   aria-controls="collapseProfile">
-                    <div class="nav-link-icon">
-                        <i data-feather="grid"></i>
-                    </div>
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseProfile"
+                   aria-expanded="false" aria-controls="collapseProfile">
+                    <div class="nav-link-icon"><i data-feather="user"></i></div>
                     Profile
                     <div class="sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                 </a>
@@ -26,20 +28,35 @@
                         <a class="nav-link" href="{% url 'ui_cv_work' %}">Riwayat Pekerjaan</a>
                         <a class="nav-link" href="{% url 'ui_cv_skills' %}">Keahlian</a>
                         <a class="nav-link" href="{% url 'ui_cv_certifications' %}">Sertifikasi</a>
-                        <a class="nav-link" href="{% url 'ui_cv_languages' %}">Keahlian Bahasa</a>
-                        <a class="nav-link" href="{% url 'ui_cv_trainings' %}">Riwayat Pelatihan</a>
+                        <a class="nav-link" href="{% url 'ui_cv_languages' %}">Bahasa</a>
+                        <a class="nav-link" href="{% url 'ui_cv_trainings' %}">Pelatihan</a>
                         <a class="nav-link" href="{% url 'ui_cv_generate' %}">Generate CV</a>
                     </nav>
                 </div>
 
+                <!-- COURSE / EXAM NAVIGATION -->
+                <div class="sidenav-menu-heading">Pelatihan</div>
+
+                <a class="nav-link" href="{% url 'ui_courses' %}">
+                    <div class="nav-link-icon"><i data-feather="book-open"></i></div>
+                    Courses
+                </a>
+
+                <a class="nav-link" href="{% url 'ui_exams' %}">
+                    <div class="nav-link-icon"><i data-feather="edit-3"></i></div>
+                    Exams
+                </a>
+
             </div>
         </div>
 
-        <!-- Footer User Info -->
+        <!-- FOOTER -->
         <div class="sidenav-footer">
             <div class="sidenav-footer-content">
                 <div class="sidenav-footer-subtitle">Logged in as:</div>
-                <div class="sidenav-footer-title">{{ request.user.username }}</div>
+                <div class="sidenav-footer-title">
+                    {{ request.user.username }}
+                </div>
             </div>
         </div>
     </nav>

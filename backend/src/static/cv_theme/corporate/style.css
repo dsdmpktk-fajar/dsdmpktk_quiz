@@ -1,0 +1,102 @@
+@page {
+    size: A4;
+    margin: 25mm;
+}
+
+body {
+    font-family: "Helvetica", Arial, sans-serif;
+    color: #222;
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.container {
+    width: 100%;
+}
+
+h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+}
+
+/* ===========================
+   HEADER
+=========================== */
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #1A4F8A;
+    padding-bottom: 10px;
+}
+
+.name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1A4F8A;
+}
+
+.position {
+    font-size: 15px;
+    margin-top: 3px;
+    color: #444;
+}
+
+.right-info p {
+    margin: 0;
+    text-align: right;
+    font-size: 12px;
+}
+
+/* ===========================
+   SECTIONS
+=========================== */
+.section {
+    margin-top: 22px;
+}
+
+.section-title {
+    color: #1A4F8A;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    border-left: 4px solid #1A4F8A;
+    padding-left: 8px;
+}
+
+.item {
+    margin-bottom: 14px;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.item-title {
+    font-weight: 600;
+}
+
+.item-subtitle {
+    font-size: 12px;
+    color: #444;
+    margin-bottom: 3px;
+}
+
+.item-date {
+    font-size: 12px;
+    color: #555;
+}
+
+.desc {
+    margin: 5px 0 0;
+}
+
+.list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.list li {
+    margin-bottom: 4px;
+}

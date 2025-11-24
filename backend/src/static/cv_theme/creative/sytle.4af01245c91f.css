@@ -1,0 +1,93 @@
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+body {
+    font-family: "Inter", Arial, sans-serif;
+    color: #222;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ===========================
+   HEADER BLOCK
+=========================== */
+.header-block {
+    background: #E66A57;
+    color: #fff;
+    padding: 25px 30px;
+    margin-bottom: 25px;
+}
+
+.header-block h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.header-block h2 {
+    margin: 5px 0 0;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+/* ===========================
+   CONTENT CONTAINER
+=========================== */
+.container {
+    width: 100%;
+}
+
+/* ===========================
+   SECTIONS
+=========================== */
+.section {
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #E66A57;
+    margin-bottom: 8px;
+    border-left: 4px solid #E66A57;
+    padding-left: 8px;
+}
+
+/* ===========================
+   ENTRY ITEMS
+=========================== */
+.entry {
+    margin-bottom: 12px;
+}
+
+.entry-title {
+    font-weight: 600;
+    font-size: 13.2px;
+}
+
+.entry-date {
+    font-size: 12px;
+    color: #555;
+}
+
+/* ===========================
+   TAG LIST (Skills / Languages)
+=========================== */
+.tag-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tag-list li {
+    display: inline-block;
+    background: #FFE7E3;
+    border: 1px solid #E66A57;
+    color: #333;
+    padding: 3px 8px;
+    margin: 3px 5px 0 0;
+    border-radius: 4px;
+    font-size: 12px;
+}

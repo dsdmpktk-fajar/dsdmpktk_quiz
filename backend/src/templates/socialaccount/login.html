@@ -1,0 +1,89 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Social Login - SB Admin Pro</title>
+
+    <link href="{% static 'ui_theme/css/styles.css' %}" rel="stylesheet" />
+
+    <script data-search-pseudo-elements defer 
+        src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/js/all.min.js"
+        crossorigin="anonymous"></script>
+</head>
+
+<body class="bg-primary">
+
+    <div id="layoutAuthentication">
+        <div id="layoutAuthentication_content">
+
+            <main>
+                <div class="container-xl px-4">
+
+                    <div class="row justify-content-center">
+                        <div class="col-xl-5 col-lg-6 col-md-8 col-sm-11">
+
+                            <div class="card my-5">
+
+                                <div class="card-body p-5 text-center">
+
+                                    <h3 class="fw-light mb-3">
+                                        Continue signing in
+                                    </h3>
+
+                                    <p class="small text-muted mb-4">
+                                        You are signing in using your Google account.
+                                    </p>
+
+                                    <!-- Account details from Google -->
+                                    {% if process == "connect" %}
+                                        <p class="text-gray-600 small">
+                                            You are about to connect a new third-party account.
+                                        </p>
+                                    {% else %}
+                                        <p class="text-gray-600 small">
+                                            You are about to sign in with your Google account.
+                                        </p>
+                                    {% endif %}
+
+                                    <!-- Confirm button -->
+                                    <form method="post" action="{% url 'socialaccount_connections' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-primary w-100 mt-3">
+                                            Continue
+                                        </button>
+                                    </form>
+
+                                    <!-- Cancel -->
+                                    <a href="{% url 'account_login' %}" 
+                                       class="btn btn-outline-secondary w-100 mt-3">
+                                        Cancel
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+        </div>
+
+        <div id="layoutAuthentication_footer">
+            <footer class="footer-admin mt-auto footer-dark">
+                <div class="container-xl text-center small">
+                    Copyright © Your Website
+                </div>
+            </footer>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

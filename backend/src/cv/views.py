@@ -2,7 +2,9 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
+from django.conf import settings
 from .utils.generate_pdf import render_pdf
 
 from .models import (
@@ -162,18 +164,34 @@ class CVGeneratorViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["get"], url_path="generate")
     def generate_cv(self, request, pk=None):
-        # default theme: professional
+        # Theme default
+
+        if str(request.user.id) != str(pk):
+            return Response({"detail": "Tidak diizinkan mengakses CV ini."}, status=403)
+        
         theme = request.query_params.get("theme", "professional")
-        mode = request.query_params.get("mode", "download")  # preview / download
+        mode = request.query_params.get("mode", "preview")
 
-        profile = get_object_or_404(UserProfile, user_id=pk)
+        profile = (
+            UserProfile.objects
+                .prefetch_related(
+                    "educations",
+                    "work_experiences",
+                    "skills",
+                    "certifications",
+                    "languages",
+                    "trainings",
+                )
+                .get(user_id=pk)
+        )
 
-        education = Education.objects.filter(user=profile)
-        work = WorkExperience.objects.filter(user=profile)
-        skills = Skill.objects.filter(user=profile)
-        certs = Certification.objects.filter(user=profile)
-        languages = LanguageSkill.objects.filter(user=profile)
-        trainings = TrainingHistory.objects.filter(user=profile)
+        # Ambil data dari prefetch
+        education = profile.educations.all()
+        work = profile.work_experiences.all()
+        skills = profile.skills.all()
+        certs = profile.certifications.all()
+        languages = profile.languages.all()
+        trainings = profile.trainings.all()
 
         context = {
             "profile": profile,
@@ -183,18 +201,16 @@ class CVGeneratorViewSet(viewsets.ViewSet):
             "certs": certs,
             "languages": languages,
             "trainings": trainings,
-            "achievements": [],
+            "theme": theme,
+            "STATIC_URL_ABS": request.build_absolute_uri(settings.STATIC_URL),
         }
 
-        # filename custom
-        safe_name = slugify(profile.full_name)
-        filename = f"cv_{safe_name}_{pk}.pdf"
+        filename = f"cv_{slugify(profile.full_name)}_{pk}.pdf"
 
-        # =============================
-        # THEME PATH = cv/<theme>/index.html
-        # =============================
+        # Theme path
         template_path = f"cv_theme/{theme}/index.html"
 
+        # Render the PDF
         return render_pdf(
             template_src=template_path,
             context=context,
