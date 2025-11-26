@@ -3,6 +3,8 @@ import random
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 
 # Class
@@ -88,6 +90,10 @@ class CourseSyllabus(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+
+    category = models.CharField(max_length=255, blank=True, null=True)
+    sub_category = models.CharField(max_length=255, blank=True, null=True)
+    informant = models.CharField(max_length=255, blank=True, null=True)
 
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
@@ -314,6 +320,7 @@ class CourseMaterial(models.Model):
 
     # Optional file
     file = models.FileField(upload_to="course_materials/", null=True, blank=True)
+    video_url = models.URLField(null=True, blank=True)
 
     # Optional URL
     url = models.URLField(null=True, blank=True)
@@ -326,3 +333,165 @@ class CourseMaterial(models.Model):
 
     def __str__(self):
         return f"{self.course.title} - {self.title}"
+
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class CourseRequirementTemplate(models.Model):
+    FIELD_TYPES = [
+        ("text", "Text"),
+        ("number", "Number"),
+        ("file", "File Upload"),
+        ("select", "Select"),
+    ]
+
+    course = models.ForeignKey(
+        Course,
+        related_name="requirements",
+        on_delete=models.CASCADE
+    )
+    field_name = models.CharField(max_length=255)
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
+    options = models.JSONField(null=True, blank=True)   # untuk select list
+    required = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.course.title} - {self.field_name}"
+
+
+
+class CourseRequirementSubmission(models.Model):
+    STATUS = [
+        ("pending", "Pending Review"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    status = models.CharField(max_length=20, choices=STATUS, default="pending")
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        related_name="requirement_reviews",
+        on_delete=models.SET_NULL
+    )
+    note = models.TextField(null=True, blank=True)  # catatan admin
+
+    def __str__(self):
+        return f"Submission from {self.user} - {self.course}"
+
+
+
+class CourseRequirementAnswer(models.Model):
+    submission = models.ForeignKey(
+        CourseRequirementSubmission,
+        related_name="answers",
+        on_delete=models.CASCADE
+    )
+    requirement = models.ForeignKey(
+        CourseRequirementTemplate,
+        on_delete=models.CASCADE
+    )
+
+    value_text = models.TextField(null=True, blank=True)
+    value_number = models.FloatField(null=True, blank=True)
+    value_file = models.FileField(
+        upload_to="course_requirements/",
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"{self.submission.user} - {self.requirement.field_name}"
+
+
+# models.py (append/modify)
+from django.conf import settings
+from django.db import models
+
+User = settings.AUTH_USER_MODEL  # use this in ForeignKey definitions below if necessary
+
+# --- COURSE: evaluation_mode (add to Course model) ---
+# inside Course model add:
+EVALUATION_MODES = [
+    ("none", "No Final Result"),
+    ("exam_only", "Exam Based"),
+    ("assessment_only", "Assessment Based"),
+    ("combined", "Exam + Assessment"),
+    ("manual", "Manual Decision")
+]
+
+# Example insertion (edit existing Course model to include this field):
+evaluation_mode = models.CharField(
+    max_length=50,
+    choices=EVALUATION_MODES,
+    default="none",
+    help_text="Mode evaluasi final untuk course/event"
+)
+
+# --- EXAM: is_mandatory (add to Exam model) ---
+# inside Exam model add:
+is_mandatory = models.BooleanField(
+    default=False,
+    help_text="Jika True, exam ini wajib lulus agar peserta dianggap lulus course (bila evaluation_mode membutuhkan)"
+)
+
+
+# ---------------------------------------------------------------------
+# New models for Course Assessment (matrix) — add these near other models
+# ---------------------------------------------------------------------
+class CourseAssessmentCriteria(models.Model):
+    course = models.ForeignKey("Course", related_name="assessment_criteria", on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    max_score = models.PositiveIntegerField(default=20)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.course} - {self.name}"
+
+
+class CourseAssessment(models.Model):
+    course = models.ForeignKey("Course", related_name="assessments", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="course_assessments", on_delete=models.CASCADE)
+    assessor = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="given_assessments", on_delete=models.SET_NULL, null=True, blank=True)
+
+    total_score = models.FloatField(default=0)
+    status = models.CharField(max_length=20, null=True, blank=True)  # accepted / reserve / rejected — can be free text or choices
+    note = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("course", "user")  # one assessment per user per course (adjust if multiple allowed)
+
+    def recalc_total(self):
+        total = sum([a.score for a in self.answers.all()])
+        self.total_score = total
+        self.save()
+        return self.total_score
+
+    def __str__(self):
+        return f"{self.course} - {self.user} - {self.total_score}"
+
+
+class CourseAssessmentAnswer(models.Model):
+    assessment = models.ForeignKey(CourseAssessment, related_name="answers", on_delete=models.CASCADE)
+    criteria = models.ForeignKey(CourseAssessmentCriteria, on_delete=models.CASCADE)
+    score = models.FloatField(default=0)
+    note = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.assessment} - {self.criteria.name} - {self.score}"

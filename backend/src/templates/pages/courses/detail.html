@@ -1,0 +1,141 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}Detail Course{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- COURSE TITLE -->
+    <h3 id="course-title">Loading...</h3>
+    <p id="course-description" class="text-muted"></p>
+
+    <div class="d-flex gap-3 mb-4">
+        <span id="course-level" class="badge bg-primary"></span>
+        <span id="course-method" class="badge bg-secondary"></span>
+        <span id="course-quota" class="badge bg-info text-dark"></span>
+    </div>
+
+    <!-- NAV -->
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-syllabus">Syllabus</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-materials">Materi</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tasks">Tugas</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-exams">Ujian</a></li>
+    </ul>
+
+    <!-- CONTENT -->
+    <div class="tab-content">
+
+        <!-- SYLLABUS TAB -->
+        <div class="tab-pane fade show active" id="tab-syllabus">
+            <div class="d-flex justify-content-between mb-3">
+                <h5>Syllabus</h5>
+                <button id="btn-add-syllabus" class="btn btn-primary btn-sm d-none">
+                    + Tambah Syllabus
+                </button>
+            </div>
+            <div id="syllabus-list">Memuat syllabus...</div>
+        </div>
+
+        <!-- MATERIALS TAB -->
+        <div class="tab-pane fade" id="tab-materials">
+            <h5 class="mb-3">Materi</h5>
+            <div id="materials-list">Memuat materi...</div>
+        </div>
+
+        <!-- TASKS TAB -->
+        <div class="tab-pane fade" id="tab-tasks">
+            <h5 class="mb-3">Tugas</h5>
+            <div id="tasks-list">Memuat tugas...</div>
+        </div>
+
+        <!-- EXAMS TAB -->
+        <div class="tab-pane fade" id="tab-exams">
+            <h5 class="mb-3">Ujian</h5>
+            <div id="exams-list">Memuat ujian...</div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL SYLLABUS -->
+<div class="modal fade" id="modalSyllabus" tabindex="-1" data-bs-backdrop="static"
+     data-bs-keyboard="false">
+  <div class="modal-dialog">
+    <form class="modal-content" id="form-syllabus">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Form Syllabus</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="syllabus-id">
+
+        <div class="mb-3">
+          <label>Judul</label>
+          <input class="form-control" id="syllabus-title">
+        </div>
+
+        <div class="mb-3">
+          <label>Deskripsi</label>
+          <textarea class="form-control" id="syllabus-desc"></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label>Kategori</label>
+          <input class="form-control" id="syllabus-category">
+        </div>
+
+        <div class="mb-3">
+          <label>Subkategori</label>
+          <input class="form-control" id="syllabus-subcategory">
+        </div>
+
+        <div class="mb-3">
+          <label>Informant</label>
+          <input class="form-control" id="syllabus-informant">
+        </div>
+
+        <div class="mb-3">
+          <label>Waktu Mulai</label>
+          <input type="datetime-local" class="form-control" id="syllabus-start">
+        </div>
+
+        <div class="mb-3">
+          <label>Waktu Selesai</label>
+          <input type="datetime-local" class="form-control" id="syllabus-end">
+        </div>
+
+        <div class="mb-3">
+          <label>Durasi (menit)</label>
+          <input type="number" class="form-control" id="syllabus-duration">
+        </div>
+
+        <div class="mb-3">
+          <label>Order</label>
+          <input type="number" class="form-control" id="syllabus-order" value="0">
+        </div>
+
+        <div id="syllabus-message" class="text-danger small mt-2"></div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const COURSE_ID = {{ course_id }};
+    const USER_ID = {{ request.user.id }};
+    const user_is_staff = {{ request.user.is_staff|yesno:"true,false" }};
+</script>
+<script src="{% static 'js/course_detail.js' %}"></script>
+{% endblock %}

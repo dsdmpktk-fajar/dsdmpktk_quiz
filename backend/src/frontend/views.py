@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from exam.models import CourseParticipant, Exam
 from cv.models import UserProfile
 from django.contrib.auth.decorators import login_required
@@ -73,3 +73,14 @@ def page_courses(request):
 @login_required
 def page_exams(request):
     return render(request, "pages/exams/index.html")
+
+@login_required
+def admin_dashboard_page(request):
+    if not request.user.is_staff:
+        return redirect("/")  # or wherever non-admin go
+    return render(request, "dashboard/admin_dashboard.html")
+
+@login_required
+def page_course_detail(request, course_id):
+    return render(request, "pages/courses/detail.html", {"course_id": course_id})
+

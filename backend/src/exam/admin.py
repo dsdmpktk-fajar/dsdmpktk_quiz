@@ -10,7 +10,10 @@ from .models import (
     UserAnswer,
     CourseTask,
     CourseTaskSubmission,
-    CourseTaskSubmissionFile
+    CourseTaskSubmissionFile,
+    CourseAssessment,
+    CourseAssessmentCriteria,
+    CourseAssessmentAnswer
 )
 
 # ======================================================
@@ -42,8 +45,8 @@ class CourseParticipantAdmin(admin.ModelAdmin):
 
 @admin.register(CourseSyllabus)
 class CourseSyllabusAdmin(admin.ModelAdmin):
-    list_display = ("id", "course", "title", "start_time", "end_time", "duration_minutes", "order")
-    search_fields = ("title", "course__title")
+    list_display = ("id", "course", "title", "category", "sub_category", "informant", "start_time", "end_time", "duration_minutes", "order")
+    search_fields = ("title", "category", "sub_category")
     list_filter = ("course", )
     ordering = ("order",)
 
@@ -130,3 +133,23 @@ class CourseTaskSubmissionFileAdmin(admin.ModelAdmin):
     list_display = ("id", "submission", "file", "uploaded_at")
     search_fields = ("submission__task__title",)
     list_filter = ("uploaded_at",)
+
+@admin.register(CourseAssessmentCriteria)
+class CourseAssessmentCriteriaAdmin(admin.ModelAdmin):
+    list_display = ("id", "course", "name", "max_score", "order")
+    list_filter = ("course",)
+    search_fields = ("name",)
+
+
+@admin.register(CourseAssessment)
+class CourseAssessmentAdmin(admin.ModelAdmin):
+    list_display = ("id", "course", "user", "assessor", "total_score", "status", "created_at")
+    list_filter = ("status", "course")
+    search_fields = ("user__username", "course__title")
+
+
+@admin.register(CourseAssessmentAnswer)
+class CourseAssessmentAnswerAdmin(admin.ModelAdmin):
+    list_display = ("id", "assessment", "criteria", "score")
+    list_filter = ("criteria",)
+    search_fields = ("assessment__user__username", "criteria__name")

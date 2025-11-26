@@ -13,7 +13,13 @@ from .models import (
     CourseTask,
     CourseTaskSubmission,
     CourseTaskSubmissionFile,
-    CourseMaterial
+    CourseMaterial,
+    CourseRequirementTemplate,
+    CourseRequirementAnswer,
+    CourseRequirementSubmission,
+    CourseAssessmentCriteria,
+    CourseAssessment,
+    CourseAssessmentAnswer
 )
 
 # ============================================================
@@ -73,6 +79,9 @@ class CourseSyllabusSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "category",
+            "sub_category",
+            "informant",
             "start_time",
             "end_time",
             "duration_minutes",
@@ -341,8 +350,12 @@ class CourseSyllabusCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseSyllabus
         fields = [
+            "id",
             "title",
             "description",
+            "category",
+            "sub_category",
+            "informant",
             "start_time",
             "end_time",
             "duration_minutes",
@@ -350,19 +363,31 @@ class CourseSyllabusCreateUpdateSerializer(serializers.ModelSerializer):
         ]
 
 
-class QuestionCreateUpdateSerializer(serializers.ModelSerializer):
+class CourseSyllabusCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Question
+        model = CourseSyllabus
         fields = [
-            "text",
-            "question_type",
-            "required",
+            "id",
+            "title",
+            "description",
+            "category",
+            "sub_category",
+            "informant",
+            "start_time",
+            "end_time",
+            "duration_minutes",
             "order",
-            "points",
-            "weight",
-            "allow_multiple_files",
-            "allow_blank_answer",
         ]
+        extra_kwargs = {
+            "description": {"required": False, "allow_blank": True},
+            "category": {"required": False, "allow_blank": True, "allow_null": True},
+            "sub_category": {"required": False, "allow_blank": True, "allow_null": True},
+            "informant": {"required": False, "allow_blank": True, "allow_null": True},
+            "start_time": {"required": False, "allow_null": True},
+            "end_time": {"required": False, "allow_null": True},
+            "duration_minutes": {"required": False, "allow_null": True},
+            "order": {"required": False},
+        }
 
 
 class ChoiceCreateUpdateSerializer(serializers.ModelSerializer):
@@ -417,6 +442,7 @@ class CourseMaterialSerializer(serializers.ModelSerializer):
             "description",
             "material_type",
             "file",
+            "video_url",
             "url",
             "order",
             "created_at",
@@ -433,6 +459,7 @@ class CourseMaterialCreateUpdateSerializer(serializers.ModelSerializer):
             "description",
             "material_type",
             "file",
+            "video_url",
             "url",
             "order",
         ]
@@ -450,3 +477,112 @@ class CourseMaterialCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("File wajib diupload untuk materi ini.")
 
         return data
+
+
+class CourseRequirementTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseRequirementTemplate
+        fields = [
+            "id",
+            "field_name",
+            "field_type",
+            "options",
+            "required",
+            "order",
+        ]
+
+
+class CourseRequirementAnswerSerializer(serializers.ModelSerializer):
+    requirement = serializers.PrimaryKeyRelatedField(queryset=CourseRequirementTemplate.objects.all())
+
+    class Meta:
+        model = CourseRequirementAnswer
+        fields = [
+            "requirement",
+            "value_text",
+            "value_number",
+            "value_file",
+        ]
+
+
+class CourseRequirementSubmissionSerializer(serializers.ModelSerializer):
+    answers = CourseRequirementAnswerSerializer(many=True)
+
+    class Meta:
+        model = CourseRequirementSubmission
+        fields = [
+            "id",
+            "course",
+            "user",
+            "status",
+            "submitted_at",
+            "reviewed_at",
+            "note",
+            "answers",
+        ]
+        read_only_fields = ["status", "submitted_at", "reviewed_at"]
+
+    def create(self, validated_data):
+        answers_data = validated_data.pop("answers")
+        submission = CourseRequirementSubmission.objects.create(**validated_data)
+
+        for ans in answers_data:
+            CourseRequirementAnswer.objects.create(
+                submission=submission,
+                **ans
+            )
+
+        return submission
+
+
+# Criteria serializer
+class CourseAssessmentCriteriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseAssessmentCriteria
+        fields = ["id", "course", "name", "max_score", "order"]
+
+# Answer serializer (nested)
+class CourseAssessmentAnswerSerializer(serializers.ModelSerializer):
+    criteria_detail = CourseAssessmentCriteriaSerializer(source="criteria", read_only=True)
+
+    class Meta:
+        model = CourseAssessmentAnswer
+        fields = ["id", "criteria", "criteria_detail", "score", "note"]
+
+# Assessment serializer (read)
+class CourseAssessmentSerializer(serializers.ModelSerializer):
+    answers = CourseAssessmentAnswerSerializer(many=True, read_only=True)
+    assessor_detail = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = CourseAssessment
+        fields = ["id", "course", "user", "assessor", "assessor_detail", "total_score", "status", "note", "answers", "created_at"]
+
+# Create/update Assessment with nested answers
+class CourseAssessmentCreateSerializer(serializers.ModelSerializer):
+    answers = CourseAssessmentAnswerSerializer(many=True)
+
+    class Meta:
+        model = CourseAssessment
+        fields = ["id", "course", "user", "assessor", "status", "note", "answers"]
+
+    def create(self, validated_data):
+        answers_data = validated_data.pop("answers", [])
+        assessment = CourseAssessment.objects.create(**validated_data)
+        for a in answers_data:
+            CourseAssessmentAnswer.objects.create(assessment=assessment, **a)
+        assessment.recalc_total()
+        return assessment
+
+    def update(self, instance, validated_data):
+        answers_data = validated_data.pop("answers", None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if answers_data is not None:
+            # simple approach: delete old answers and recreate
+            instance.answers.all().delete()
+            for a in answers_data:
+                CourseAssessmentAnswer.objects.create(assessment=instance, **a)
+        instance.recalc_total()
+        return instance

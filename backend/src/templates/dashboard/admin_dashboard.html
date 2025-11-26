@@ -1,0 +1,168 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <h1 class="h3 mb-4 text-gray-800">Admin Dashboard</h1>
+
+  <!-- Top cards -->
+  <div class="row" id="dashboard-cards">
+    <!-- Cards will be injected by JS -->
+  </div>
+
+  <!-- Running courses -->
+  <div class="row mt-4">
+    <div class="col-lg-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Running Courses</h6>
+        </div>
+        <div class="card-body" id="running-courses">
+          <div class="text-center text-muted">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Exams -->
+    <div class="col-lg-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Active Exams</h6>
+        </div>
+        <div class="card-body" id="active-exams">
+          <div class="text-center text-muted">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today deadlines -->
+  <div class="row mt-2">
+    <div class="col-lg-12">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Today's Deadlines</h6>
+        </div>
+        <div class="card-body" id="today-deadlines">
+          <div class="text-center text-muted">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const endpoint = "/api/exam/dashboard/admin/";
+
+  function createCard(title, value, iconClass, colorClass) {
+    return `
+      <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card ${colorClass} shadow h-100 py-2">
+          <div class="card-body">
+            <div class="row no-gutters align-items-center">
+              <div class="col mr-2">
+                <div class="text-xs font-weight-bold text-white text-uppercase mb-1">${title}</div>
+                <div class="h5 mb-0 font-weight-bold text-white">${value}</div>
+              </div>
+              <div class="col-auto">
+                <i class="${iconClass} fa-2x text-white"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  fetch(endpoint, {
+    credentials: "include",
+    headers: {
+      "Accept": "application/json"
+    }
+  })
+  .then(r => {
+    if (!r.ok) throw r;
+    return r.json();
+  })
+  .then(data => {
+    const stats = data.stats || {};
+    const cardsContainer = document.getElementById("dashboard-cards");
+    cardsContainer.innerHTML = "";
+
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Total Courses", stats.total_courses || 0, "fas fa-book", "bg-primary"));
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Participants", stats.total_participants || 0, "fas fa-users", "bg-success"));
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Trainers", stats.total_trainers || 0, "fas fa-user-tie", "bg-info"));
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Assessors", stats.total_assessors || 0, "fas fa-user-check", "bg-warning"));
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Exams", stats.total_exams || 0, "fas fa-file-alt", "bg-secondary"));
+    cardsContainer.insertAdjacentHTML("beforeend", createCard("Tasks", stats.total_tasks || 0, "fas fa-tasks", "bg-dark"));
+
+    // Running courses
+    const rc = data.running_courses || [];
+    const rcContainer = document.getElementById("running-courses");
+    if (rc.length === 0) rcContainer.innerHTML = "<div class='text-muted'>No running courses.</div>";
+    else {
+      rcContainer.innerHTML = "<ul class='list-group'>";
+      rc.forEach(c => {
+        rcContainer.insertAdjacentHTML("beforeend",
+          `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${c.title}</strong><br/><small>${c.start_date} → ${c.end_date}</small>
+            </div>
+            <a href="/courses/${c.id}/" class="btn btn-sm btn-outline-primary">Open</a>
+          </li>`
+        );
+      });
+      rcContainer.insertAdjacentHTML("beforeend", "</ul>");
+    }
+
+    // Active exams
+    const ae = data.active_exams || [];
+    const aeContainer = document.getElementById("active-exams");
+    if (ae.length === 0) aeContainer.innerHTML = "<div class='text-muted'>No active exams.</div>";
+    else {
+      aeContainer.innerHTML = "<ul class='list-group'>";
+      ae.forEach(e => {
+        aeContainer.insertAdjacentHTML("beforeend",
+          `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${e.title}</strong><br/><small>${e.course_title}</small>
+            </div>
+            <small>${new Date(e.end_time).toLocaleString()}</small>
+          </li>`
+        );
+      });
+      aeContainer.insertAdjacentHTML("beforeend", "</ul>");
+    }
+
+    // Today deadlines
+    const td = data.today_deadlines || [];
+    const tdContainer = document.getElementById("today-deadlines");
+    if (td.length === 0) tdContainer.innerHTML = "<div class='text-muted'>No deadlines today.</div>";
+    else {
+      tdContainer.innerHTML = "<ul class='list-group'>";
+      td.forEach(t => {
+        tdContainer.insertAdjacentHTML("beforeend",
+          `<li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${t.title}</strong><br/><small>${t.course_title}</small>
+            </div>
+            <small>Due: ${t.due_date}</small>
+          </li>`
+        );
+      });
+      tdContainer.insertAdjacentHTML("beforeend", "</ul>");
+    }
+
+  })
+  .catch(err => {
+    console.error(err);
+    const container = document.getElementById("dashboard-cards");
+    container.innerHTML = "<div class='col-12'><div class='alert alert-danger'>Gagal memuat data dashboard. Cek konsol untuk detail.</div></div>";
+  });
+});
+</script>
+{% endblock %}

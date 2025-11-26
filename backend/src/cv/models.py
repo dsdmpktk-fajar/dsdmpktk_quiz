@@ -129,3 +129,24 @@ class TrainingHistory(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.organizer}"
+    
+
+class EmployeeInfo(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    nip = models.CharField(max_length=50, null=True, blank=True)
+    nik = models.CharField(max_length=50, null=True, blank=True)
+
+    unit_kerja = models.CharField(max_length=255, null=True, blank=True)
+    bidang_kerja = models.CharField(max_length=255, null=True, blank=True)
+
+    jabatan = models.CharField(max_length=255, null=True, blank=True)  # <–– JABATAN ADA DI SINI
+
+    golongan_ruang = models.CharField(max_length=50, null=True, blank=True)
+
+    status_kepegawaian = models.CharField(max_length=100, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.jabatan or '-'}"

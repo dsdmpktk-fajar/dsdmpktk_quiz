@@ -22,7 +22,6 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from exam.urls import router as exam_router
 from cv.urls import router as cv_router
 
 @api_view(["GET"])
@@ -43,7 +42,7 @@ urlpatterns = [
 
     # Router asli tetap dipakai
     path('api/cv/', include(cv_router.urls)),
-    path('api/exam/', include(exam_router.urls)),
+    path('api/exam/', include('exam.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

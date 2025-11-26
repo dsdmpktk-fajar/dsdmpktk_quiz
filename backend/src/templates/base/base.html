@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token }}">
 
     <title>{% block title %}LEAP UNPAD{% endblock %}</title>
 
@@ -36,8 +37,14 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'ui_theme/js/scripts.js' %}"></script>
 
-    <script>feather.replace();</script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if (window.feather) {
+            feather.replace();
+        }
+    });
+    </script>
 
-    {% block scripts %}{% endblock %}
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>
