@@ -19,7 +19,8 @@ from .models import (
     CourseRequirementSubmission,
     CourseAssessmentCriteria,
     CourseAssessment,
-    CourseAssessmentAnswer
+    CourseAssessmentAnswer,
+    UserAnswerFile
 )
 
 # ============================================================
@@ -154,12 +155,15 @@ class ExamAdminSerializer(serializers.ModelSerializer):
 class ChoicePublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Choice
-        fields = ["id", "text", "order"]
+        fields = ["id", "text", "order", "score"]
         read_only_fields = ["id"]
 
 
 class QuestionPublicSerializer(serializers.ModelSerializer):
-    choices = ChoicePublicSerializer(many=True, read_only=True)
+    choices = ChoicePublicSerializer(many=True)
+    parent_question = serializers.IntegerField(source="parent_question_id", read_only=True)
+    parent_choice = serializers.IntegerField(source="parent_choice_id", read_only=True)
+    child_questions = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -171,12 +175,62 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
             "order",
             "points",
             "choices",
+            "parent_question",
+            "parent_choice",
+            "child_questions"
         ]
         read_only_fields = ["id"]
+    
+    def get_child_questions(self, obj):
+        return [{"id": q.id, "parent_choice": q.parent_choice_id} for q in obj.child_questions.all()]    
+
+
+
+class QuestionCreateUpdateSerializer(serializers.ModelSerializer):
+    parent_question = serializers.PrimaryKeyRelatedField(
+        queryset=Question.objects.all(), required=False, allow_null=True
+    )
+    parent_choice = serializers.PrimaryKeyRelatedField(
+        queryset=Choice.objects.all(), required=False, allow_null=True
+    )
+
+
+    class Meta:
+        model = Question
+        fields = [
+            "text",
+            "question_type",
+            "required",
+            "order",
+            "points",
+            "weight",
+            "allow_multiple_files",
+            "allow_blank_answer",
+            "parent_question",
+            "parent_choice"
+        ]
+
+    def validate(self, attrs):
+        parent_choice = attrs.get("parent_choice")
+        parent_question = attrs.get("parent_question")
+        if parent_choice and not parent_question:
+            raise serializers.ValidationError("parent_choice diberikan tanpa parent_question.")
+        if parent_choice and parent_question:
+            if parent_choice.question_id != parent_question.id:
+                raise serializers.ValidationError("parent_choice harus milik parent_question yang sama.")
+        return super().validate(attrs)
 
 
 class ExamPublicSerializer(serializers.ModelSerializer):
     questions = QuestionPublicSerializer(many=True, read_only=True)
+    user_attempt = serializers.SerializerMethodField()
+
+    def get_user_attempt(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        ue = UserExam.objects.filter(exam=obj, user=request.user).order_by("-attempt_number").first()
+        return ue.id if ue else None
 
     class Meta:
         model = Exam
@@ -189,6 +243,7 @@ class ExamPublicSerializer(serializers.ModelSerializer):
             "end_time",
             "passing_grade",
             "questions",
+            "user_attempt"
         ]
         read_only_fields = ["id"]
 
@@ -197,10 +252,16 @@ class ExamPublicSerializer(serializers.ModelSerializer):
 # USER EXAM + USER ANSWER
 # ============================================================
 
+class UserAnswerFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAnswerFile
+        fields = ("id", "file", "uploaded_at")
+
 class UserAnswerSerializer(serializers.ModelSerializer):
     selected_choices = serializers.PrimaryKeyRelatedField(
         queryset=Choice.objects.all(), many=True, required=False
     )
+    files = UserAnswerFileSerializer(many=True, read_only=True)
 
     class Meta:
         model = UserAnswer
@@ -212,6 +273,7 @@ class UserAnswerSerializer(serializers.ModelSerializer):
             "text_answer",
             "score",
             "graded",
+            "files"
         ]
         read_only_fields = ["id", "score", "graded"]
 
@@ -265,6 +327,8 @@ class SubmitAnswerSerializer(serializers.Serializer):
     }
     """
     answers = serializers.ListField()
+
+
 
 
 # ============================================================
@@ -494,44 +558,36 @@ class CourseRequirementTemplateSerializer(serializers.ModelSerializer):
 
 class CourseRequirementAnswerSerializer(serializers.ModelSerializer):
     requirement = serializers.PrimaryKeyRelatedField(queryset=CourseRequirementTemplate.objects.all())
+    value_file = serializers.FileField(allow_null=True, required=False)
 
     class Meta:
         model = CourseRequirementAnswer
-        fields = [
-            "requirement",
-            "value_text",
-            "value_number",
-            "value_file",
-        ]
+        fields = ("id", "requirement", "value_text", "value_number", "value_file")
 
 
 class CourseRequirementSubmissionSerializer(serializers.ModelSerializer):
-    answers = CourseRequirementAnswerSerializer(many=True)
+    answers = CourseRequirementAnswerSerializer(many=True, write_only=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    reviewer = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = CourseRequirementSubmission
-        fields = [
-            "id",
-            "course",
-            "user",
-            "status",
-            "submitted_at",
-            "reviewed_at",
-            "note",
-            "answers",
-        ]
-        read_only_fields = ["status", "submitted_at", "reviewed_at"]
+        fields = ("id", "course", "user", "status", "submitted_at", "reviewed_at", "reviewer", "note", "answers")
+        read_only_fields = ("status", "submitted_at", "reviewed_at", "reviewer", "id")
+
 
     def create(self, validated_data):
-        answers_data = validated_data.pop("answers")
+        answers_data = validated_data.pop("answers", [])
+        # user is set in view (should pass request.user)
         submission = CourseRequirementSubmission.objects.create(**validated_data)
-
         for ans in answers_data:
             CourseRequirementAnswer.objects.create(
                 submission=submission,
-                **ans
+                requirement=ans.get("requirement"),
+                value_text=ans.get("value_text"),
+                value_number=ans.get("value_number"),
+                value_file=ans.get("value_file")
             )
-
         return submission
 
 

@@ -1,0 +1,27 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Mulai Ujian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <h2 id="exam-title">Memuat...</h2>
+    <p id="exam-desc" class="text-muted"></p>
+
+    <div class="card p-3 mb-4">
+        <div><strong>Durasi:</strong> <span id="exam-duration">-</span> menit</div>
+        <div><strong>Passing Grade:</strong> <span id="exam-passing">-</span></div>
+        <div><strong>Attempt Anda:</strong> <span id="exam-attempt">-</span></div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-start-exam">Mulai Ujian</button>
+    <div id="start-msg" class="mt-3 text-danger"></div>
+
+</div>
+
+<script>
+    const EXAM_ID = {{ exam_id }};
+</script>
+<script src="{% static 'js/exam_start.js' %}"></script>
+{% endblock %}

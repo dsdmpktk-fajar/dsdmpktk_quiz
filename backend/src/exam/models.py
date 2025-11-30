@@ -183,6 +183,24 @@ class Question(models.Model):
     allow_multiple_files = models.BooleanField(default=False)
     allow_blank_answer = models.BooleanField(default=False)
 
+    parent_question = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="child_questions",
+        help_text="Jika diisi, pertanyaan ini muncul hanya ketika parent_choice dipilih."
+    )
+
+    parent_choice = models.ForeignKey(
+        "Choice",          # string reference karena Choice didefinisikan setelah Question
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="triggered_questions",
+        help_text="Choice pada parent_question yang akan memicu question ini muncul."
+    )
+
     class Meta:
         ordering = ["order"]
 
@@ -253,6 +271,15 @@ class UserAnswer(models.Model):
 
     def __str__(self):
         return f"Answer: {self.user_exam} - {self.question}"
+    
+class UserAnswerFile(models.Model):
+    answer = models.ForeignKey(UserAnswer, related_name="files", on_delete=models.CASCADE)
+    file = models.FileField(upload_to="exam_uploads/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"File for Answer {self.answer.id} - {self.file.name}"
+
 
 # Submmit Task
 

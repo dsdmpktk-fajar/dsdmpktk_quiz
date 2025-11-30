@@ -1,6 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db.models import Q
+
 
 from rest_framework import viewsets, status, permissions as drf_permissions
 from rest_framework.views import APIView
@@ -29,7 +31,8 @@ from .models import (
     CourseRequirementAnswer,
     CourseAssessment,
     CourseRequirementSubmission,
-    CourseAssessmentCriteria
+    CourseAssessmentCriteria,
+    UserAnswerFile
 )
 
 # ============================
@@ -64,6 +67,7 @@ from .serializers import (
     CourseRequirementSubmissionSerializer,
     CourseRequirementAnswerSerializer,
     CourseRequirementSubmission,
+    CourseRequirementTemplate,  
 
     CourseAssessmentCriteriaSerializer,
     CourseAssessmentCreateSerializer,
@@ -100,21 +104,21 @@ class CourseViewSet(viewsets.ModelViewSet):
             return [IsAdmin()]
         return [drf_permissions.IsAuthenticated()]
 
-    # -----------------------
+    # =====================================================================
     # JOIN COURSE
-    # -----------------------
+    # =====================================================================
     @action(detail=True, methods=["post"], url_path="join")
     def join(self, request, pk=None):
         course = self.get_object()
 
-        # Jika ada persyaratan → user HARUS apply dulu
+        # jika course punya requirement → harus isi persyaratan
         if course.requirements.exists():
             return Response({
-                "detail": "Course ini memerlukan approval admin.",
+                "detail": "Course ini memerlukan persyaratan. Silakan isi form persyaratan.",
                 "requires_approval": True
             }, status=400)
 
-        # Jika TIDAK ada persyaratan → pakai token seperti biasa
+        # Jika tidak ada requirement → join dengan token
         serializer = CourseJoinSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -131,19 +135,18 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "Berhasil join.", "participant_id": cp.id})
 
-
-    # -----------------------
-    # PARTICIPANTS
-    # -----------------------
+    # =====================================================================
+    # LIST PARTICIPANTS
+    # =====================================================================
     @action(detail=True, methods=["get"], url_path="participants")
     def participants(self, request, pk=None):
         course = self.get_object()
         qs = CourseParticipant.objects.filter(course=course)
         return Response(CourseParticipantSerializer(qs, many=True).data)
 
-    # -----------------------
-    # ASSIGN ROLE (ADMIN/TRAINER)
-    # -----------------------
+    # =====================================================================
+    # ASSIGN ROLE
+    # =====================================================================
     @action(detail=True, methods=["post"], url_path="assign-role")
     def assign_role(self, request, pk=None):
         course = self.get_object()
@@ -163,16 +166,216 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "Role diperbarui."})
 
-    # ============================================================
-    # SYLLABUS CRUD
-    # ============================================================
+    # =====================================================================
+    # REQUIREMENTS — LIST TEMPLATE + USER SUBMISSION
+    # =====================================================================
+    @action(detail=True, methods=["get"], url_path="requirements")
+    def list_requirements(self, request, pk=None):
+        course = self.get_object()
 
+        templates = CourseRequirementTemplate.objects.filter(course=course).order_by("order")
+        temp_ser = CourseRequirementTemplateSerializer(templates, many=True).data
+
+        # get latest submission per user
+        latest = CourseRequirementSubmission.objects.filter(
+            course=course,
+            user=request.user
+        ).order_by("-submitted_at").first()
+
+        submission_data = None
+
+        if latest:
+            answers = CourseRequirementAnswer.objects.filter(submission=latest)
+            submission_data = {
+                "id": latest.id,
+                "status": latest.status,
+                "submitted_at": latest.submitted_at,
+                "reviewed_at": latest.reviewed_at,
+                "reviewer": latest.reviewer.id if latest.reviewer else None,
+                "note": latest.note,
+                "answers": CourseRequirementAnswerSerializer(answers, many=True).data
+            }
+
+        return Response({
+            "templates": temp_ser,
+            "user_submission": submission_data
+        })
+
+    # =====================================================================
+    # SUBMIT REQUIREMENTS  (file upload supported)
+    # =====================================================================
+    @action(detail=True, methods=["post"], url_path="requirements/submit")
+    def submit_requirements(self, request, pk=None):
+        course = self.get_object()
+
+        if not course.requirements.exists():
+            return Response({"detail": "Course ini tidak memiliki persyaratan."}, status=400)
+
+        import json
+
+        # If multipart (files included)
+        if request.content_type.startswith("multipart/"):
+            answers_json = request.POST.get("answers")
+            if not answers_json:
+                return Response({"detail": "Data 'answers' tidak dikirim."}, status=400)
+            try:
+                answers_list = json.loads(answers_json)
+            except:
+                return Response({"detail": "Format JSON jawaban invalid."}, status=400)
+
+            # attach file(s)
+            for ans in answers_list:
+                req_id = str(ans.get("requirement"))
+                f_key = f"file_{req_id}"
+                if f_key in request.FILES:
+                    ans["value_file"] = request.FILES[f_key]
+        else:
+            answers_list = request.data.get("answers") or []
+
+        if not answers_list:
+            return Response({"detail": "Tidak ada jawaban dikirim."}, status=400)
+
+        # create submission
+        submission = CourseRequirementSubmission.objects.create(
+            course=course,
+            user=request.user,
+            status="pending"
+        )
+
+        created_ids = []
+        for ans in answers_list:
+            req = CourseRequirementTemplate.objects.filter(
+                id=ans.get("requirement"),
+                course=course
+            ).first()
+            if not req:
+                continue
+
+            obj = CourseRequirementAnswer.objects.create(
+                submission=submission,
+                requirement=req,
+                value_text=ans.get("value_text"),
+                value_number=ans.get("value_number"),
+                value_file=ans.get("value_file", None)
+            )
+            created_ids.append(obj.id)
+
+        return Response({
+            "detail": "Persyaratan berhasil diajukan.",
+            "submission_id": submission.id,
+            "answers_created": created_ids
+        }, status=201)
+
+    # =====================================================================
+    # REQUIREMENTS — ADMIN LIST SUBMISSIONS
+    # =====================================================================
+    @action(detail=True, methods=["get"], url_path="submissions")
+    def submissions(self, request, pk=None):
+        course = self.get_object()
+
+        if not request.user.is_staff:
+            return Response({"detail": "Tidak diizinkan."}, status=403)
+
+        subs = CourseRequirementSubmission.objects.filter(course=course).order_by("-submitted_at")
+
+        data = []
+        for s in subs:
+            answers = CourseRequirementAnswer.objects.filter(submission=s)
+            data.append({
+                "id": s.id,
+                "user": s.user.username,
+                "status": s.status,
+                "submitted_at": s.submitted_at,
+                "reviewed_at": s.reviewed_at,
+                "reviewer": s.reviewer.username if s.reviewer else None,
+                "answers": CourseRequirementAnswerSerializer(answers, many=True).data
+            })
+
+        return Response(data)
+
+    # =====================================================================
+    # REQUIREMENTS — APPROVE
+    # =====================================================================
+    @action(detail=True, methods=["patch"], url_path="submission/(?P<sid>[^/.]+)/approve")
+    def approve_submission(self, request, pk=None, sid=None):
+        course = self.get_object()
+
+        if not request.user.is_staff:
+            return Response({"detail": "Tidak diizinkan."}, status=403)
+
+        submission = get_object_or_404(CourseRequirementSubmission, id=sid, course=course)
+
+        submission.status = "approved"
+        submission.reviewed_at = timezone.now()
+        submission.reviewer = request.user
+        submission.save()
+
+        # auto-add participant
+        CourseParticipant.objects.get_or_create(
+            course=course,
+            user=submission.user
+        )
+
+        return Response({"detail": "Submission disetujui dan user menjadi peserta."})
+
+    # =====================================================================
+    # REQUIREMENTS — REJECT
+    # =====================================================================
+    @action(detail=True, methods=["patch"], url_path="submission/(?P<sid>[^/.]+)/reject")
+    def reject_submission(self, request, pk=None, sid=None):
+        course = self.get_object()
+
+        if not request.user.is_staff:
+            return Response({"detail": "Tidak diizinkan."}, status=403)
+
+        submission = get_object_or_404(CourseRequirementSubmission, id=sid, course=course)
+
+        submission.status = "rejected"
+        submission.note = request.data.get("note", "")
+        submission.reviewed_at = timezone.now()
+        submission.reviewer = request.user
+        submission.save()
+
+        return Response({"detail": "Submission ditolak."})
+
+    # =====================================================================
+    # REQUIREMENTS — DOWNLOAD FILE
+    # =====================================================================
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="submission/(?P<sid>[^/.]+)/download/(?P<answer_id>[^/.]+)",
+        permission_classes=[IsAdmin]
+    )
+    def download_requirement_file(self, request, pk=None, sid=None, answer_id=None):
+
+        submission = get_object_or_404(
+            CourseRequirementSubmission, id=sid, course_id=pk
+        )
+        answer = get_object_or_404(
+            CourseRequirementAnswer, id=answer_id, submission=submission
+        )
+
+        if not answer.value_file:
+            return Response({"detail": "Tidak ada file."}, status=404)
+
+        file_name = answer.value_file.name.split("/")[-1]
+
+        response = HttpResponse(
+            answer.value_file.open("rb").read(),
+            content_type="application/octet-stream"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{file_name}"'
+        return response
+
+    # =====================================================================
+    # SYLLABUS CRUD
+    # =====================================================================
     def get_serializer_class(self):
         if self.action in ["syllabus_create", "syllabus_update"]:
             return CourseSyllabusCreateUpdateSerializer
         return CourseSerializer
 
-    
 
     @action(detail=True, methods=["get"], url_path="syllabus")
     def list_syllabus(self, request, pk=None):
@@ -181,15 +384,9 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = CourseSyllabusSerializer(syllabus, many=True)
         return Response(serializer.data)
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="syllabus/create",
-        url_name="syllabus_create"
-    )
+    @action(detail=True, methods=["post"], url_path="syllabus/create")
     def syllabus_create(self, request, pk=None):
         course = self.get_object()
-
         if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer", "admin"])):
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
@@ -220,12 +417,11 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         syllabus = get_object_or_404(CourseSyllabus, id=sid, course=course)
         syllabus.delete()
-
         return Response({"detail": "Silabus dihapus."})
-    
-    # ============================================================
-    # LIST TASKS (NEW ENDPOINT)
-    # ============================================================
+
+    # =====================================================================
+    # TASK LIST
+    # =====================================================================
     @action(detail=True, methods=["get"], url_path="tasks")
     def list_tasks(self, request, pk=None):
         course = self.get_object()
@@ -233,21 +429,9 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = CourseTaskSerializer(tasks, many=True)
         return Response(serializer.data)
 
-
-    # ============================================================
-    # LIST EXAMS (NEW ENDPOINT)
-    # ============================================================
-    @action(detail=True, methods=["get"], url_path="exams")
-    def list_exams(self, request, pk=None):
-        course = self.get_object()
-        exams = course.exams.all().order_by("-created_at")
-        serializer = ExamPublicSerializer(exams, many=True)
-        return Response(serializer.data)
-
-    # ============================================================
+    # =====================================================================
     # MATERIAL CRUD
-    # ============================================================
-
+    # =====================================================================
     @action(detail=True, methods=["get"], url_path="materials")
     def list_materials(self, request, pk=None):
         course = self.get_object()
@@ -255,10 +439,10 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = CourseMaterialSerializer(materials, many=True)
         return Response(serializer.data)
 
-
     @action(detail=True, methods=["post"], url_path="materials/create")
     def create_material(self, request, pk=None):
         course = self.get_object()
+
         if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer"])):
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
@@ -271,6 +455,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["patch"], url_path="materials/(?P<mid>[^/.]+)/update")
     def update_material(self, request, pk=None, mid=None):
         course = self.get_object()
+
         if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer"])):
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
@@ -284,137 +469,27 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["delete"], url_path="materials/(?P<mid>[^/.]+)/delete")
     def delete_material(self, request, pk=None, mid=None):
         course = self.get_object()
+
         if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer"])):
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
         mat = get_object_or_404(CourseMaterial, id=mid, course=course)
         mat.delete()
         return Response({"detail": "Materi dihapus."})
-    
-    @action(detail=True, methods=["post"], url_path="requirements/create")
-    def create_requirement(self, request, pk=None):
+
+    # =====================================================================
+    # LIST EXAMS
+    # =====================================================================
+    @action(detail=True, methods=["get"], url_path="exams")
+    def list_exams(self, request, pk=None):
         course = self.get_object()
+        exams = course.exams.all().order_by("-created_at")
+        serializer = ExamPublicSerializer(exams, many=True, context={"request": request})
+        return Response(serializer.data)
 
-        if not request.user.is_staff:
-            return Response({"detail": "Tidak diizinkan."}, status=403)
-
-        serializer = CourseRequirementTemplateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(course=course)
-
-        return Response(serializer.data, status=201)
-    
-    @action(detail=True, methods=["get"], url_path="requirements")
-    def list_requirements(self, request, pk=None):
-        course = self.get_object()
-        reqs = course.requirements.all().order_by("order")
-        return Response(CourseRequirementTemplateSerializer(reqs, many=True).data)
-    
-    @action(detail=True, methods=["post"], url_path="requirements/submit")
-    def submit_requirements(self, request, pk=None):
-        course = self.get_object()
-
-        if not course.requirements.exists():
-            return Response({"detail": "Course ini tidak memiliki persyaratan."}, status=400)
-
-        data = request.data.copy()
-        data["course"] = course.id
-        data["user"] = request.user.id
-
-        serializer = CourseRequirementSubmissionSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        submission = serializer.save()
-
-        return Response({
-            "detail": "Persyaratan berhasil diajukan.",
-            "submission_id": submission.id
-        })
-
-    @action(detail=True, methods=["get"], url_path="submissions")
-    def submissions(self, request, pk=None):
-        course = self.get_object()
-
-        if not request.user.is_staff:
-            return Response({"detail": "Tidak diizinkan."}, status=403)
-
-        submissions = CourseRequirementSubmission.objects.filter(course=course)
-        return Response(CourseRequirementSubmissionSerializer(submissions, many=True).data)
-    
-    @action(detail=True, methods=["patch"], url_path="submission/(?P<sid>[^/.]+)/approve")
-    def approve_submission(self, request, pk=None, sid=None):
-        course = self.get_object()
-
-        if not request.user.is_staff:
-            return Response({"detail": "Tidak diizinkan."}, status=403)
-
-        submission = get_object_or_404(
-            CourseRequirementSubmission,
-            id=sid,
-            course=course
-        )
-
-        submission.status = "approved"
-        submission.reviewed_at = timezone.now()
-        submission.reviewer = request.user
-        submission.save()
-
-        # otomatis buat participant
-        CourseParticipant.objects.get_or_create(
-            course=course,
-            user=submission.user
-        )
-
-        return Response({"detail": "Submission disetujui. User kini menjadi peserta."})
-    
-    @action(detail=True, methods=["patch"], url_path="submission/(?P<sid>[^/.]+)/reject")
-    def reject_submission(self, request, pk=None, sid=None):
-        course = self.get_object()
-
-        if not request.user.is_staff:
-            return Response({"detail": "Tidak diizinkan."}, status=403)
-
-        submission = get_object_or_404(
-            CourseRequirementSubmission,
-            id=sid,
-            course=course
-        )
-
-        submission.status = "rejected"
-        submission.note = request.data.get("note", "")
-        submission.reviewed_at = timezone.now()
-        submission.reviewer = request.user
-        submission.save()
-
-        return Response({"detail": "Submission ditolak."})
-
-    @action(
-        detail=True,
-        methods=["get"],
-        url_path="submission/(?P<sid>[^/.]+)/download/(?P<answer_id>[^/.]+)",
-        permission_classes=[IsAdmin]
-    )
-    def download_requirement_file(self, request, pk=None, sid=None, answer_id=None):
-        submission = get_object_or_404(
-            CourseRequirementSubmission,
-            id=sid,
-            course_id=pk
-        )
-
-        answer = get_object_or_404(
-            CourseRequirementAnswer,
-            id=answer_id,
-            submission=submission
-        )
-
-        if not answer.value_file:
-            return Response({"detail": "Tidak ada file."}, status=404)
-
-        file_handle = answer.value_file.open("rb")
-        response = HttpResponse(file_handle.read(), content_type="application/octet-stream")
-        response['Content-Disposition'] = f'attachment; filename="{answer.value_file.name}"'
-        file_handle.close()
-        return response
-    
+    # =====================================================================
+    # ASSESSMENT & EVALUATION
+    # =====================================================================
     @action(detail=True, methods=["post"], url_path="assessment/criteria/create", permission_classes=[IsAdmin])
     def create_criteria(self, request, pk=None):
         course = self.get_object()
@@ -425,7 +500,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=["get"], url_path="assessment/criteria", permission_classes=[drf_permissions.IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="assessment/criteria")
     def list_criteria(self, request, pk=None):
         course = self.get_object()
         qs = CourseAssessmentCriteria.objects.filter(course=course).order_by("order")
@@ -447,11 +522,9 @@ class CourseViewSet(viewsets.ModelViewSet):
         crit.delete()
         return Response({"detail": "deleted"})
 
-    # --- Submit / update assessment for a user (assessor/trainer/admin) ---
     @action(detail=True, methods=["post"], url_path="assessment/submit", permission_classes=[IsTrainer|IsAdmin|IsAssessor])
     def submit_assessment(self, request, pk=None):
         course = self.get_object()
-        # request.data should include 'user' and 'answers' array
         data = request.data.copy()
         data["course"] = course.id
         serializer = CourseAssessmentCreateSerializer(data=data)
@@ -459,71 +532,64 @@ class CourseViewSet(viewsets.ModelViewSet):
         assessment = serializer.save(assessor=request.user)
         return Response(CourseAssessmentSerializer(assessment).data, status=201)
 
-    # --- Get assessment for a user ---
-    @action(detail=True, methods=["get"], url_path="assessment/(?P<user_id>[^/.]+)", permission_classes=[drf_permissions.IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="assessment/(?P<user_id>[^/.]+)")
     def get_assessment(self, request, pk=None, user_id=None):
         course = self.get_object()
         assessment = CourseAssessment.objects.filter(course=course, user__id=user_id).first()
         if not assessment:
             return Response({"detail": "Not found"}, status=404)
         return Response(CourseAssessmentSerializer(assessment).data)
-    
-    @action(detail=True, methods=["get"], url_path="evaluation/(?P<user_id>[^/.]+)", permission_classes=[drf_permissions.IsAuthenticated])
+
+    @action(detail=True, methods=["get"], url_path="evaluation/(?P<user_id>[^/.]+)")
     def evaluation(self, request, pk=None, user_id=None):
         """
-        Return evaluation summary for user in this course depending on course.evaluation_mode.
+        Mode evaluasi final course.
         """
         course = self.get_object()
         mode = course.evaluation_mode or "none"
 
-        # Gather exam results for the user
         exams = []
         mandatory_failed = False
         for exam in course.exams.all():
-            ue = None
-            try:
-                ue = exam.userexams.filter(user__id=user_id).order_by("-attempt_number").first()
-            except Exception:
-                ue = None
-
+            ue = exam.userexams.filter(user__id=user_id).order_by("-attempt_number").first()
             score = ue.score if ue else None
             passed = None
             if score is not None and exam.passing_grade is not None:
                 passed = (score >= exam.passing_grade)
+
             exams.append({
                 "exam_id": exam.id,
-                "title": getattr(exam, "title", str(exam)),
+                "title": exam.title,
                 "score": score,
                 "passing_grade": exam.passing_grade,
                 "passed": passed,
-                "mandatory": bool(getattr(exam, "is_mandatory", False))
+                "mandatory": bool(exam.is_mandatory)
             })
+
             if exam.is_mandatory and passed is False:
                 mandatory_failed = True
 
-        # Gather assessment if exists
         assessment = CourseAssessment.objects.filter(course=course, user__id=user_id).first()
         assessment_data = CourseAssessmentSerializer(assessment).data if assessment else None
 
         final_status = None
-        # Logic depending on mode (fully dynamic)
+
         if mode == "none":
             return Response({"evaluation_enabled": False})
+
         if mode == "exam_only":
-            if mandatory_failed:
-                final_status = "not_passed"
-            else:
-                final_status = "passed"
+            final_status = "passed" if not mandatory_failed else "not_passed"
+
         elif mode == "assessment_only":
             final_status = assessment.status if assessment else None
+
         elif mode == "combined":
-            # require that mandatory exams are passed first
             if mandatory_failed:
                 final_status = "not_passed"
             else:
                 final_status = assessment.status if assessment else None
+
         elif mode == "manual":
-            # manual: if assessment exists, use it, else return None
             final_status = assessment.status if assessment else None
 
         return Response({
@@ -588,6 +654,11 @@ class ExamViewSet(viewsets.ModelViewSet):
             return ExamAdminSerializer
 
         return ExamPublicSerializer
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["request"] = self.request
+        return ctx
 
     # ============================================================
     # RESULTS
@@ -704,37 +775,114 @@ class ExamViewSet(viewsets.ModelViewSet):
     def questions(self, request, pk=None):
         exam = self.get_object()
 
+        # permission check
         if not CourseParticipant.objects.filter(course=exam.course, user=request.user).exists():
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
-        qs = exam.questions.all()
+        # Ambil semua pertanyaan exam
+        base_qs = exam.questions.all()
 
+        # if exam.shuffle_questions: ... (keep same logic)
         if exam.shuffle_questions:
-            qs = qs.order_by("?")
+            base_qs = base_qs.order_by("?")
 
+        # handle random subset (aplikasi perlu hati-hati bila branching ada)
+        # but we will compute branching before cutting subset
+
+        # Jika user mengirimkan user_exam (sudah mulai), kita sertakan branch sesuai jawaban user
+        user_exam_id = request.query_params.get("user_exam")
+        if user_exam_id:
+            try:
+                ue = UserExam.objects.get(id=user_exam_id, exam=exam, user=request.user)
+            except UserExam.DoesNotExist:
+                return Response({"detail": "UserExam tidak ditemukan."}, status=404)
+
+            # Ambil semua choice ids yang sudah dipilih di attempt ini
+            selected_choice_ids = Choice.objects.filter(
+                question__in=exam.questions.all(),
+                id__in=UserAnswer.objects.filter(user_exam=ue).values_list('selected_choices', flat=True)
+            ).values_list('id', flat=True)
+
+            # Mulai dengan soal-level atas (parent_question is None)
+            # plus setiap question whose parent_choice_id is in selected_choice_ids
+            allowed_q = base_qs.filter(Q(parent_question__isnull=True) | Q(parent_choice_id__in=selected_choice_ids))
+
+            # Support multi-level chaining: repeat until no new questions
+            # (collect ids iteratively)
+            allowed_ids = set(allowed_q.values_list("id", flat=True))
+            changed = True
+            while changed:
+                changed = False
+                # find questions whose parent_choice is in selected_choice_ids AND parent_question id in allowed_ids
+                new_qs = base_qs.filter(parent_choice_id__in=selected_choice_ids, parent_question_id__in=allowed_ids).exclude(id__in=allowed_ids)
+                new_ids = set(new_qs.values_list("id", flat=True))
+                if new_ids:
+                    allowed_ids |= new_ids
+                    changed = True
+
+            questions = base_qs.filter(id__in=allowed_ids).order_by("order")
+        else:
+            # no user_exam: return top-level questions (soal utama) only
+            questions = base_qs.filter(parent_question__isnull=True).order_by("order")
+
+        # apply random_question_count AFTER building allowed set if desired
         if exam.random_question_count:
-            qs = qs[: exam.random_question_count]
+            questions = questions[: exam.random_question_count]
 
-        return Response(QuestionPublicSerializer(qs, many=True).data)
+        serializer = QuestionPublicSerializer(questions, many=True)
+        return Response(serializer.data)
 
     # ============================================================
     # SUBMIT ANSWERS
     # ============================================================
     @action(detail=True, methods=["post"], url_path="submit")
     def submit(self, request, pk=None):
+        """
+        Accepts either:
+        - JSON body (application/json) with {"user_exam": id, "answers": [...]}  <-- autosave
+        OR
+        - multipart/form-data with:
+            - "user_exam": id
+            - "answers": JSON string (list of answer objects with question, selected_choices, text_answer)
+            - files uploaded under keys: files_<question_id> (one or many)
+        For file uploads we will attach files to the corresponding UserAnswer via UserAnswerFile.
+        """
         exam = self.get_object()
-        user_exam_id = request.data.get("user_exam")
+        # parse user_exam (could be in form or json)
+        user_exam_id = request.POST.get("user_exam") or request.data.get("user_exam")
+        if not user_exam_id:
+            return Response({"detail": "user_exam is required."}, status=400)
 
         ue = get_object_or_404(UserExam, id=user_exam_id, exam=exam, user=request.user)
 
         if ue.status != "in_progress":
             return Response({"detail": "Exam sudah selesai."}, status=400)
 
-        ser = SubmitAnswerSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
+        # Parse answers:
+        answers_raw = None
 
-        for ans in ser.validated_data["answers"]:
-            qid = ans["question"]
+        # If content type is multipart/form-data, DRF might put parsed data in request.data,
+        # but files are in request.FILES. We support either JSON body or form with 'answers' JSON string.
+        if isinstance(request.data, dict) and "answers" in request.data and not isinstance(request.data["answers"], (list, tuple)):
+            # answers possibly a JSON string in multipart form
+            try:
+                import json
+                answers_raw = json.loads(request.data["answers"])
+            except Exception:
+                return Response({"detail": "Field 'answers' must be valid JSON."}, status=400)
+        else:
+            # DRF already parsed JSON body into request.data as dict
+            answers_raw = request.data.get("answers", None)
+
+        if answers_raw is None:
+            return Response({"detail": "No answers provided."}, status=400)
+
+        # At this point answers_raw should be a list of answer dicts.
+        for ans in answers_raw:
+            qid = ans.get("question")
+            if not qid:
+                return Response({"detail": "Each answer must include 'question' id."}, status=400)
+
             q = get_object_or_404(Question, id=qid, exam=exam)
 
             ua, created = UserAnswer.objects.get_or_create(
@@ -742,17 +890,33 @@ class ExamViewSet(viewsets.ModelViewSet):
                 question=q
             )
 
+            # handle selected_choices (list)
             if "selected_choices" in ans:
-                ids = ans["selected_choices"]
+                ids = ans.get("selected_choices") or []
+                # ensure ints
+                try:
+                    ids = [int(x) for x in ids]
+                except Exception:
+                    ids = []
                 choices = Choice.objects.filter(id__in=ids, question=q)
                 ua.selected_choices.set(choices)
 
+            # handle text_answer
             if "text_answer" in ans:
-                ua.text_answer = ans["text_answer"]
+                ua.text_answer = ans.get("text_answer") or ""
 
             ua.save()
 
+            # handle file uploads: files expected under request.FILES with key files_<question_id>
+            file_field = f"files_{qid}"
+            if file_field in request.FILES:
+                files = request.FILES.getlist(file_field)
+                # create UserAnswerFile entries
+                for f in files:
+                    UserAnswerFile.objects.create(answer=ua, file=f)
+
         return Response({"detail": "Jawaban disimpan."})
+
 
     # ============================================================
     # FINISH EXAM

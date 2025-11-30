@@ -1,320 +1,261 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    const BASE = `/api/exam/courses/${COURSE_ID}/`;
+    const titleBox = document.getElementById("course-title");
+    const descBox = document.getElementById("course-description");
 
-    async function fetchJSON(url, options = {}) {
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const levelBox = document.getElementById("course-level");
+    const methodBox = document.getElementById("course-method");
+    const quotaBox = document.getElementById("course-quota");
 
-        const method = (options.method || "GET").toUpperCase();
+    const joinBox = document.getElementById("course-join-box");
 
-        const headers = {
-            "Accept": "application/json",
-            ...(options.headers || {})
-        };
+    const overviewBox = document.getElementById("overview-box");
+    const reqStatusBox = document.getElementById("req-status");
+    const reqFillBtn = document.getElementById("req-fill-btn");
 
-        // Inject CSRF for non-GET
-        if (method !== "GET" && method !== "HEAD") {
-            headers["X-CSRFToken"] = csrf;
-            if (!headers["Content-Type"]) {
-                headers["Content-Type"] = "application/json";
-            }
-        }
+    const syllabusList = document.getElementById("syllabus-list");
+    const materialsList = document.getElementById("materials-list");
+    const tasksList = document.getElementById("tasks-list");
+    const examsList = document.getElementById("exams-list");
 
-        try {
-            const res = await fetch(url, {
-                credentials: "same-origin",
-                headers,
-                ...options
-            });
-
-            if (!res.ok) {
-                console.warn("Fetch error:", res.status, await res.text());
-                return null;
-            }
-
-            return await res.json();
-        } catch (err) {
-            console.error("Network error:", err);
-            return null;
-        }
+    function csrf() {
+        const match = document.cookie.match(/csrftoken=([^;]+)/);
+        return match ? match[1] : "";
     }
 
-    // =========================================
-    // LOAD COURSE
-    // =========================================
-    fetchJSON(BASE).then(course => {
-        if (!course) return;
-        document.getElementById("course-title").textContent = course.title;
-        document.getElementById("course-description").textContent = course.description || "";
-        document.getElementById("course-level").textContent = course.level;
-        document.getElementById("course-method").textContent = course.method;
-        document.getElementById("course-quota").textContent = "Kuota: " + course.quota;
-    });
+    // ============================================================
+    // LOAD MAIN COURSE INFO
+    // ============================================================
+    async function loadCourse() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/`);
+        const data = await res.json();
 
-    // =========================================
-    // ROLE
-    // =========================================
-    let userRole = null;
+        // Header
+        titleBox.innerText = data.title;
+        descBox.innerText = data.description || "-";
 
-    fetchJSON(BASE + "participants/").then(list => {
-        const me = list?.find(p => p.user === USER_ID);
-        userRole = me ? me.role : null;
+        levelBox.innerText = data.level;
+        methodBox.innerText = data.method;
+        quotaBox.innerText = `Quota: ${data.quota}`;
 
-        if (userRole === "trainer" || user_is_staff) {
-            document.getElementById("btn-add-syllabus").classList.remove("d-none");
+        renderJoinBox(data);
+        renderOverview(data);
+    }
+
+    // ============================================================
+    // JOIN BOX LOGIC
+    // ============================================================
+    function renderJoinBox(course) {
+        if (course.joined) {
+            joinBox.innerHTML = `
+                <span class="badge bg-success">Anda sudah terdaftar sebagai peserta</span>
+            `;
+            return;
         }
-    });
 
-    // =========================================
-    // SYLLABUS
-    // =========================================
-    const syId = document.getElementById("syllabus-id");
-    const syTitle = document.getElementById("syllabus-title");
-    const syDesc = document.getElementById("syllabus-desc");
-    const syCategory = document.getElementById("syllabus-category");
-    const sySubcat = document.getElementById("syllabus-subcategory");
-    const syInformant = document.getElementById("syllabus-informant");
-    const syStart = document.getElementById("syllabus-start");
-    const syEnd = document.getElementById("syllabus-end");
-    const syDuration = document.getElementById("syllabus-duration");
-    const syOrder = document.getElementById("syllabus-order");
-    const modalEl = document.getElementById("modalSyllabus");
+        if (course.requires_approval) {
+            joinBox.innerHTML = `
+                <a class="btn btn-warning" href="/courses/${COURSE_ID}/requirements/">
+                    Isi Persyaratan
+                </a>
+            `;
+            return;
+        }
 
-    const syModal = new bootstrap.Modal(modalEl);
-    const syList = document.getElementById("syllabus-list");
+        joinBox.innerHTML = `
+            <div class="input-group" style="max-width:300px;">
+                <input class="form-control form-control-sm" id="join-token-input" placeholder="Token course">
+                <button class="btn btn-primary btn-sm" id="join-btn">Join</button>
+            </div>
+            <div id="join-message" class="small text-danger mt-1"></div>
+        `;
 
-    modalEl.addEventListener("shown.bs.modal", () => {
-        modalEl.removeAttribute("aria-hidden");
-    });
+        document.getElementById("join-btn").onclick = joinCourse;
+    }
 
-    function buildSchedule(s) {
-        if (!s.start_time) return "";
-        let start = new Date(s.start_time).toLocaleString();
-        let end = s.end_time ? new Date(s.end_time).toLocaleString() : "";
-        return `
-            <div class="small text-muted">
-                <i class="bi bi-clock"></i> ${start} — ${end} (${s.duration_minutes ?? 0} menit)
+    async function joinCourse() {
+        const token = document.getElementById("join-token-input").value;
+        const msg = document.getElementById("join-message");
+
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/join/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf()
+            },
+            body: JSON.stringify({ token }),
+            credentials: "same-origin"
+        });
+
+        const data = await res.json();
+
+        if (!res.ok && data.requires_approval) {
+            window.location.href = `/courses/${COURSE_ID}/requirements/`;
+            return;
+        }
+
+        if (!res.ok) {
+            msg.innerText = data.detail || "Gagal join.";
+            return;
+        }
+
+        location.reload();
+    }
+
+    // ============================================================
+    // OVERVIEW TAB
+    // ============================================================
+    function renderOverview(course) {
+        overviewBox.innerHTML = `
+            <div class="card border p-3">
+                <strong>Level:</strong> ${course.level}<br>
+                <strong>Metode:</strong> ${course.method}<br>
+                <strong>Quota:</strong> ${course.quota}<br>
+                <strong>Tanggal:</strong> ${course.start_date || "-"} → ${course.end_date || "-"}
             </div>
         `;
     }
 
-    function loadSyllabus() {
-        syList.innerHTML = "Memuat...";
-        fetchJSON(BASE + "syllabus/").then(items => {
-            if (!items?.length) {
-                syList.innerHTML = "Belum ada syllabus.";
-                return;
-            }
+    // ============================================================
+    // REQUIREMENT TAB
+    // ============================================================
+    async function loadRequirementStatus() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/requirements/`);
+        const data = await res.json();
 
-            syList.innerHTML = items.map(s => `
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
-                        
-                        <h5 class="fw-semibold mb-1">${escapeHTML(s.title)}</h5>
+        reqFillBtn.href = `/courses/${COURSE_ID}/requirements/`;
 
-                        ${s.informant ? `
-                            <div class="small text-primary mb-1">
-                                <i class="bi bi-person-video2"></i> ${escapeHTML(s.informant)}
-                            </div>` : ""
-                        }
+        if (!data.templates.length) {
+            reqStatusBox.innerHTML = `<div class="text-muted">Tidak ada persyaratan.</div>`;
+            return;
+        }
 
-                        <div class="text-muted small mb-2">
-                            ${escapeHTML(s.description || "")}
-                        </div>
+        if (!data.user_submission) {
+            reqStatusBox.innerHTML = `
+                <div class="alert alert-warning">Anda belum mengajukan persyaratan.</div>
+            `;
+            return;
+        }
 
-                        ${buildSchedule(s)}
+        const s = data.user_submission;
 
-                        ${(userRole === "trainer" || user_is_staff) ? `
-                            <div class="mt-2">
-                                <button class="btn btn-sm btn-outline-primary"
-                                    onclick="editSyllabus(
-                                        ${s.id},
-                                        '${escapeAttr(s.title)}',
-                                        \`${escapeBacktick(s.description || "")}\`,
-                                        '${escapeAttr(s.category || "")}',
-                                        '${escapeAttr(s.sub_category || "")}',
-                                        ${s.order},
-                                        '${s.start_time || ""}',
-                                        '${s.end_time || ""}',
-                                        ${s.duration_minutes ?? 'null'},
-                                        '${escapeAttr(s.informant || "")}'
-                                    )">Edit</button>
+        let badge = `<span class="badge bg-secondary">Pending</span>`;
+        if (s.status === "approved") badge = `<span class="badge bg-success">Approved</span>`;
+        if (s.status === "rejected") badge = `<span class="badge bg-danger">Rejected</span>`;
 
-                                <button class="btn btn-sm btn-outline-danger ms-1"
-                                    onclick="deleteSyllabus(${s.id})">
-                                    Hapus
-                                </button>
-                            </div>
-                        ` : ""}
-
-                    </div>
-                </div>
-            `).join("");
-        });
-    }
-    loadSyllabus();
-
-    document.getElementById("btn-add-syllabus").onclick = () => {
-        syId.value = "";
-        syTitle.value = "";
-        syDesc.value = "";
-        syCategory.value = "";
-        sySubcat.value = "";
-        syInformant.value = "";
-        syStart.value = "";
-        syEnd.value = "";
-        syDuration.value = "";
-        syOrder.value = "0";
-        syModal.show();
-    };
-
-    window.editSyllabus = (id, title, desc, cat, subcat, order, start, end, duration, informant) => {
-        syId.value = id;
-        syTitle.value = title;
-        syDesc.value = desc;
-        syCategory.value = cat;
-        sySubcat.value = subcat;
-        syInformant.value = informant;
-        syOrder.value = order;
-
-        syStart.value = start ? formatLocal(start) : "";
-        syEnd.value = end ? formatLocal(end) : "";
-        syDuration.value = duration ?? "";
-
-        syModal.show();
-    };
-
-    function formatLocal(dt) {
-        let d = new Date(dt);
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        return d.toISOString().slice(0, 16);
+        reqStatusBox.innerHTML = `
+            <div class="card p-3">
+                <div>Status: ${badge}</div>
+                <small class="text-muted">Dikirim: ${s.submitted_at}</small>
+                ${s.note ? `<div class="text-danger mt-2">Catatan: ${s.note}</div>` : ""}
+            </div>
+        `;
     }
 
-    document.getElementById("form-syllabus").onsubmit = (e) => {
-        e.preventDefault();
+    // ============================================================
+    // SYLLABUS
+    // ============================================================
+    async function loadSyllabus() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/syllabus/`);
+        const data = await res.json();
 
-        const id = syId.value;
+        if (!data.length) {
+            syllabusList.innerHTML = `<div class="text-muted">Belum ada syllabus.</div>`;
+            return;
+        }
 
-        const payload = {
-            title: syTitle.value,
-            description: syDesc.value,
-            category: syCategory.value,
-            sub_category: sySubcat.value,
-            order: Number(syOrder.value),
-            start_time: syStart.value ? new Date(syStart.value).toISOString() : null,
-            end_time: syEnd.value ? new Date(syEnd.value).toISOString() : null,
-            duration_minutes: syDuration.value ? Number(syDuration.value) : null,
-            informant: syInformant.value || null
-        };
+        syllabusList.innerHTML = `
+            <ul class="list-group">
+                ${data.map(s => `
+                    <li class="list-group-item">
+                        <strong>${s.title}</strong><br>
+                        <small class="text-muted">${s.category || ""} / ${s.sub_category || ""}</small>
+                        <div class="small text-muted mt-1">${s.start_time || "-"} → ${s.end_time || "-"}</div>
+                    </li>
+                `).join("")}
+            </ul>
+        `;
+    }
 
-        const url = id
-            ? `${BASE}syllabus/${id}/update/`
-            : `${BASE}syllabus/create/`;
-
-        fetchJSON(url, {
-            method: id ? "PATCH" : "POST",
-            body: JSON.stringify(payload)
-        }).then(() => {
-            syModal.hide();
-            loadSyllabus();
-        });
-    };
-
-    window.deleteSyllabus = (id) => {
-        if (!confirm("Hapus syllabus ini?")) return;
-        fetchJSON(`${BASE}syllabus/${id}/delete/`, { method: "DELETE" })
-            .then(() => loadSyllabus());
-    };
-
-    // =========================================
+    // ============================================================
     // MATERIALS
-    // =========================================
-    function loadMaterials() {
-        const el = document.getElementById("materials-list");
-        el.innerHTML = "Memuat...";
-        fetchJSON(BASE + "materials/").then(items => {
-            if (!items?.length) {
-                el.innerHTML = "Belum ada materi.";
-                return;
-            }
-            el.innerHTML = items.map(m => `
-                <div class="card border-0 shadow-sm mb-2">
-                    <div class="card-body">
-                        <h6>${escapeHTML(m.title)}</h6>
-                        <p class="small">${escapeHTML(m.description || "")}</p>
+    // ============================================================
+    async function loadMaterials() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/materials/`);
+        const data = await res.json();
 
-                        ${m.file ? `<a href="${m.file}" target="_blank">Download File</a><br>` : ""}
-                        ${m.video_url ? `<iframe width="100%" height="240" src="${m.video_url}"></iframe>` : ""}
-                        ${m.url ? `<a href="${m.url}" target="_blank">Buka Link</a>` : ""}
-                    </div>
-                </div>
-            `).join("");
-        });
+        if (!data.length) {
+            materialsList.innerHTML = `<div class="text-muted">Belum ada materi.</div>`;
+            return;
+        }
+
+        materialsList.innerHTML = `
+            <ul class="list-group">
+                ${data.map(m => `
+                    <li class="list-group-item">
+                        <strong>${m.title}</strong><br>
+                        <small>${m.description || ""}</small>
+                    </li>
+                `).join("")}
+            </ul>
+        `;
     }
-    loadMaterials();
 
-    // =========================================
+    // ============================================================
     // TASKS
-    // =========================================
-    function loadTasks() {
-        const el = document.getElementById("tasks-list");
-        el.innerHTML = "Memuat...";
-        fetchJSON(BASE + "tasks/").then(items => {
-            if (!items?.length) {
-                el.innerHTML = "Belum ada tugas.";
-                return;
-            }
-            el.innerHTML = items.map(t => `
-                <div class="card border-0 shadow-sm mb-2">
-                    <div class="card-body">
-                        <h6>${escapeHTML(t.title)}</h6>
-                        <p class="small">${escapeHTML(t.description || "")}</p>
-                        ${t.due_date ? `<span class="badge bg-warning text-dark">Deadline: ${t.due_date}</span>` : ""}
-                    </div>
-                </div>
-            `).join("");
-        });
-    }
-    loadTasks();
+    // ============================================================
+    async function loadTasks() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/tasks/`);
+        const data = await res.json();
 
-    // =========================================
+        if (!data.length) {
+            tasksList.innerHTML = `<div class="text-muted">Belum ada tugas.</div>`;
+            return;
+        }
+
+        tasksList.innerHTML = `
+            <ul class="list-group">
+                ${data.map(t => `
+                    <li class="list-group-item">
+                        <strong>${t.title}</strong><br>
+                        <small>${t.description || ""}</small>
+                    </li>
+                `).join("")}
+            </ul>
+        `;
+    }
+
+    // ============================================================
     // EXAMS
-    // =========================================
-    function loadExams() {
-        const el = document.getElementById("exams-list");
-        el.innerHTML = "Memuat...";
-        fetchJSON(BASE + "exams/").then(items => {
-            if (!items?.length) {
-                el.innerHTML = "Belum ada ujian.";
-                return;
-            }
-            el.innerHTML = items.map(ex => `
-                <div class="card border-0 shadow-sm mb-2">
-                    <div class="card-body">
-                        <h6>${escapeHTML(ex.title)}</h6>
-                        <p class="small">${escapeHTML(ex.description || "")}</p>
-                        ${
-                            ex.start_date && ex.end_date
-                            ? `<span class="badge bg-info text-dark">${ex.start_date} — ${ex.end_date}</span>`
-                            : ""
-                        }
-                        <a href="/exams/${ex.id}/" class="btn btn-sm btn-primary mt-2">Buka Ujian</a>
-                    </div>
-                </div>
-            `).join("");
-        });
+    // ============================================================
+    async function loadExams() {
+        const res = await fetch(`/api/exam/courses/${COURSE_ID}/exams/`);
+        const data = await res.json();
+
+        if (!data.length) {
+            examsList.innerHTML = `<div class="text-muted">Belum ada ujian.</div>`;
+            return;
+        }
+
+        examsList.innerHTML = `
+            <ul class="list-group">
+                ${data.map(e => `
+                    <li class="list-group-item">
+                        <strong>${e.title}</strong><br>
+                        <a href="/exams/${e.id}/" class="btn btn-primary btn-sm mt-2">Mulai</a>
+                    </li>
+                `).join("")}
+            </ul>
+        `;
     }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    loadCourse();
+    loadRequirementStatus();
+    loadSyllabus();
+    loadMaterials();
+    loadTasks();
     loadExams();
-
-    // =========================================
-    // HELPERS
-    // =========================================
-    function escapeHTML(str) {
-        return str.replace(/[&<>"']/g, m =>
-            ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m])
-        );
-    }
-    function escapeAttr(str) { return str.replace(/'/g, "\\'"); }
-    function escapeBacktick(str) { return str.replace(/`/g, "\\`"); }
-
 });

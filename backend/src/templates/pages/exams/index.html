@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}Daftar Ujian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Daftar Ujian</h2>
+    <a href="{% url 'ui_courses' %}" class="btn btn-sm btn-outline-secondary">Kembali ke Courses</a>
+  </div>
+
+  <div id="alert-area"></div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <table class="table table-striped" id="exams-table">
+        <thead>
+          <tr>
+            <th>Judul</th>
+            <th>Deskripsi</th>
+            <th>Durasi</th>
+            <th>Mulai — Selesai</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="exams-tbody">
+          <!-- diisi oleh JS -->
+        </tbody>
+      </table>
+
+      <div id="loading" style="display:none">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/exam.js' %}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    ExamApp.initListPage("#exams-tbody", "#alert-area");
+  });
+</script>
+{% endblock %}

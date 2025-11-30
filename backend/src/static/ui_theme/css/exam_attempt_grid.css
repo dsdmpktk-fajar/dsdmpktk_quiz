@@ -1,0 +1,46 @@
+/* ==============================
+   Navigation Buttons (Exam)
+   ============================== */
+
+#navigation {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.nav-item {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+  background: #f0f0f0;
+  color: #333;
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.nav-item:hover {
+  background: #e0e0e0;
+}
+
+/* Soal aktif */
+.nav-item.current {
+  background: #4169E1;
+  color: white;
+}
+
+/* Soal sudah dijawab */
+.nav-item.answered {
+  background: #2ECC71;
+  color: white;
+}
+
+/* Soal belum dijawab */
+.nav-item.default {
+  background: #e8e8e8;
+}

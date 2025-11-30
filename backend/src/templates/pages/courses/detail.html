@@ -1,33 +1,49 @@
 {% extends "base/base.html" %}
 {% load static %}
+
 {% block title %}Detail Course{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 py-4">
 
-    <!-- COURSE TITLE -->
+    <!-- COURSE HEADER -->
     <h3 id="course-title">Loading...</h3>
     <p id="course-description" class="text-muted"></p>
 
-    <div class="d-flex gap-3 mb-4">
+    <div id="course-overview" class="d-flex gap-3 mb-4">
         <span id="course-level" class="badge bg-primary"></span>
         <span id="course-method" class="badge bg-secondary"></span>
         <span id="course-quota" class="badge bg-info text-dark"></span>
     </div>
 
-    <!-- NAV -->
+    <!-- JOIN STATUS / BUTTON -->
+    <div id="course-join-box" class="mb-4"></div>
+
+    <!-- NAV TABS -->
     <ul class="nav nav-tabs mb-3">
-        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-syllabus">Syllabus</a></li>
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-overview">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-requirements">Persyaratan</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-syllabus">Syllabus</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-materials">Materi</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tasks">Tugas</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-exams">Ujian</a></li>
     </ul>
 
-    <!-- CONTENT -->
     <div class="tab-content">
 
+        <!-- OVERVIEW TAB -->
+        <div class="tab-pane fade show active" id="tab-overview">
+            <div id="overview-box">Memuat...</div>
+        </div>
+
+        <!-- REQUIREMENTS TAB -->
+        <div class="tab-pane fade" id="tab-requirements">
+            <div id="req-status" class="mb-3">Memuat...</div>
+            <a class="btn btn-primary" id="req-fill-btn" href="#">Isi Persyaratan</a>
+        </div>
+
         <!-- SYLLABUS TAB -->
-        <div class="tab-pane fade show active" id="tab-syllabus">
+        <div class="tab-pane fade" id="tab-syllabus">
             <div class="d-flex justify-content-between mb-3">
                 <h5>Syllabus</h5>
                 <button id="btn-add-syllabus" class="btn btn-primary btn-sm d-none">
@@ -129,6 +145,7 @@
     </form>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}

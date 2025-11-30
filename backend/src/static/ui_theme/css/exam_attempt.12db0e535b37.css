@@ -1,0 +1,152 @@
+/* ============================
+   EXAM ATTEMPT UI – FINAL
+   Aman, clean, tidak override global
+   ============================ */
+
+/* --- Timer --- */
+#timer {
+    font-weight: 700;
+    color: #d9534f;
+    letter-spacing: 1px;
+}
+
+
+/* ============================
+   NAVIGASI SOAL
+   ============================ */
+#navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#navigation button {
+    border: none;
+    padding: 10px 14px;
+    min-width: 48px;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: 0.15s ease;
+    cursor: pointer;
+}
+
+#navigation button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* soal sedang aktif */
+.nav-item-current {
+    background-color: #3b59ff !important;
+    color: #fff !important;
+}
+
+/* soal belum aktif */
+.nav-item-default {
+    background-color: #607d8b;
+    color: white;
+}
+
+/* soal sudah dijawab */
+.nav-item-answered {
+    background-color: #43a047 !important;
+    color: white !important;
+}
+
+
+/* ============================
+   QUESTION BOX
+   ============================ */
+#question-box {
+    font-size: 1.15rem;
+    line-height: 1.55;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+}
+
+
+/* ============================
+   CHOICE AND INPUT STYLE
+   ============================ */
+#question-box input[type="radio"],
+#question-box input[type="checkbox"] {
+    accent-color: #3b59ff;
+    cursor: pointer;
+}
+
+#question-box textarea,
+#question-box select,
+#question-box input[type="file"] {
+    margin-top: 8px;
+}
+
+
+/* ============================
+   FLASH MESSAGE
+   ============================ */
+#exam-msg .alert {
+    padding: 8px 12px;
+    margin-top: 10px;
+}
+
+
+/* ============================
+   NAV BUTTONS
+   ============================ */
+#btn-prev,
+#btn-next,
+#btn-finish {
+    padding: 9px 28px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+/* warna tombol */
+#btn-finish {
+    background-color: #d9534f;
+    border: none;
+}
+
+#btn-next {
+    background-color: #0275d8;
+    border: none;
+}
+
+#btn-prev {
+    background-color: #6c757d;
+    border: none;
+}
+
+
+/* ============================
+   DISABLED STATES
+   ============================ */
+#navigation button:disabled,
+#btn-next:disabled,
+#btn-prev:disabled,
+#btn-finish:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ============================
+   OPTIONAL: PROGRESS BAR
+   (aktifkan jika perlu di HTML)
+   ============================ */
+.exam-progress-bar {
+    height: 6px;
+    width: 100%;
+    background: #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.exam-progress-inner {
+    height: 100%;
+    width: 0%;
+    background: #3b59ff;
+    transition: width 0.3s ease;
+}

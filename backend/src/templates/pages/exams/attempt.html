@@ -1,0 +1,52 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Attempt Ujian{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{% static 'ui_theme/exam_attempt_grid.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 id="exam-title">Memuat ujian...</h3>
+    <div id="timer" class="fs-6 text-danger"></div>
+  </div>
+
+  <!-- PROGRESS (di atas soal) -->
+  <div class="mb-3">
+    <div class="progress" style="height:10px;">
+      <div id="progress-inner" class="progress-bar" role="progressbar" style="width:0%"></div>
+    </div>
+    <div class="small text-muted mt-1" id="progress-text">Memuat...</div>
+  </div>
+
+  <!-- NAVIGASI (GRID KOTAK) -->
+  <div id="navigation" class="navigation-grid mb-4" aria-label="Navigasi Soal"></div>
+
+  <!-- SOAL (card seperti sekarang) -->
+  <div id="question-card" class="question-card mb-4">
+    <div id="question-box">Memuat soal...</div>
+  </div>
+
+  <!-- Tombol -->
+  <div class="d-flex justify-content-between">
+    <button id="btn-prev" class="btn btn-secondary">Sebelumnya</button>
+    <div>
+      <button id="btn-finish" class="btn btn-danger">Selesai</button>
+    </div>
+    <button id="btn-next" class="btn btn-primary">Berikutnya</button>
+  </div>
+
+  <div id="exam-msg" class="mt-3 text-danger"></div>
+</div>
+
+<script>
+  const EXAM_ID = {{ exam_id }};
+  const ATTEMPT_ID = {{ attempt_id }};
+</script>
+
+<script src="{% static 'js/exam_attempt.js' %}"></script>
+{% endblock %}

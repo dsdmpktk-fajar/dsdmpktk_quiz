@@ -1,0 +1,24 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Hasil Ujian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h3 class="mb-4">Hasil Ujian</h3>
+
+    <div id="result-box" class="mb-4">
+        <div class="text-muted">Memuat hasil...</div>
+    </div>
+
+    <a href="/exams/" class="btn btn-secondary">Kembali ke daftar ujian</a>
+    <a id="review-link" href="#" class="btn btn-primary ms-2 d-none">Review Jawaban</a>
+</div>
+
+<script>
+  const EXAM_ID = {{ exam_id }};
+  const ATTEMPT_ID = {{ attempt_id }};
+</script>
+
+<script src="{% static 'js/exam_result.js' %}"></script>
+{% endblock %}

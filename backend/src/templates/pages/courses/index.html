@@ -5,18 +5,24 @@
 {% block content %}
 <div class="container-fluid px-4 py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Daftar Pelatihan</h3>
-    <div>
+    <h3 class="mb-0">Daftar Course</h3>
+
+    <div class="d-flex align-items-center">
       {% if user.is_staff %}
-      <a href="#" class="btn btn-primary btn-sm" id="btn-create-course">+ Course Baru</a>
+      <a href="#" class="btn btn-primary btn-sm">+ Course Baru</a>
       {% endif %}
-      <input id="course-search" class="form-control form-control-sm d-inline-block ms-2" style="width:250px" placeholder="Cari course..." />
+      <input id="course-search" 
+             class="form-control form-control-sm d-inline-block ms-2" 
+             style="width:250px" 
+             placeholder="Cari course..." />
     </div>
   </div>
 
   <div id="courses-container" class="row g-3">
     <!-- cards akan di-render di sini oleh JS -->
-    <div class="col-12 text-center text-muted" id="courses-loading">Memuat daftar course…</div>
+    <div class="col-12 text-center text-muted" id="courses-loading">
+      Memuat daftar course…
+    </div>
   </div>
 
   <nav aria-label="page-nav" class="mt-4">
@@ -28,18 +34,26 @@
 <div class="modal fade" id="joinCourseModal" tabindex="-1" aria-labelledby="joinCourseModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form id="join-course-form" class="modal-content">
+      {% csrf_token %}
       <div class="modal-header">
         <h5 class="modal-title" id="joinCourseModalLabel">Join Course</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+
       <div class="modal-body">
         <input type="hidden" id="join-course-id" />
+
         <div class="mb-3">
           <label for="join-token" class="form-label">Token Course (jika diperlukan)</label>
-          <input id="join-token" class="form-control" name="token" placeholder="Masukkan token (jika diminta)" />
+          <input id="join-token" 
+                 class="form-control" 
+                 name="token" 
+                 placeholder="Masukkan token (jika diminta)" />
         </div>
+
         <div id="join-course-message" class="small text-muted"></div>
       </div>
+
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
         <button type="submit" class="btn btn-primary btn-sm">Gabung</button>

@@ -1,0 +1,45 @@
+/* Navigasi tombol soal */
+#question-nav button {
+    min-width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    border: none;
+    background: #e74c3c;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    transition: .2s;
+}
+
+#question-nav button.active {
+    background: #3b59ff !important;
+}
+
+#question-nav button.answered {
+    background: #2ecc71 !important;
+}
+
+#question-nav button:hover {
+    transform: translateY(-2px);
+    opacity: .85;
+}
+
+/* Card soal */
+.question-card {
+    padding: 25px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    min-height: 180px;
+}
+
+/* Tombol navigasi */
+.btn-purple {
+    background: #6a0dad;
+    color: white;
+}
+
+.btn-purple:hover {
+    background: #550a9e;
+    color: white;
+}

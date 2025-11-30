@@ -2,6 +2,8 @@ from django.shortcuts import render,redirect
 from exam.models import CourseParticipant, Exam
 from cv.models import UserProfile
 from django.contrib.auth.decorators import login_required
+from django.template.loader import get_template
+
 
 @login_required
 def dashboard_view(request):
@@ -71,6 +73,10 @@ def page_courses(request):
     return render(request, "pages/courses/index.html")
 
 @login_required
+def page_course_requirements(request, course_id):
+    return render(request, "pages/courses/requirements.html", {"course_id": course_id})
+
+@login_required
 def page_exams(request):
     return render(request, "pages/exams/index.html")
 
@@ -84,3 +90,24 @@ def admin_dashboard_page(request):
 def page_course_detail(request, course_id):
     return render(request, "pages/courses/detail.html", {"course_id": course_id})
 
+@login_required
+def page_exam_start(request, exam_id):
+    return render(request, "pages/exams/start.html", {"exam_id": exam_id})
+
+
+@login_required
+def page_exam_attempt(request, exam_id, user_exam_id):
+    tpl = get_template("pages/exams/attempt.html")
+    return render(request, "pages/exams/attempt.html", {
+        "exam_id": exam_id,
+        "attempt_id": user_exam_id,
+    })
+
+
+@login_required
+def page_exam_result(request, exam_id, user_exam_id):
+    tpl = get_template("pages/exams/attempt.html")
+    return render(request, "pages/exams/result.html", {
+        "exam_id": exam_id,
+        "attempt_id": user_exam_id,  # <-- sama
+    })

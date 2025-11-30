@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Persyaratan Course{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h3 class="mb-3">Persyaratan Course</h3>
+
+    <div id="req-status-box" class="mb-3"></div>
+
+    <div id="req-template-list" class="mb-4">
+        <div class="text-muted">Memuat persyaratan...</div>
+    </div>
+
+    <div id="req-form-container" class="card shadow-sm" style="display:none;">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Form Pengajuan Persyaratan</h5>
+            <form id="req-form">
+                {% csrf_token %}
+                <div id="req-fields"></div>
+
+                <button class="btn btn-primary mt-3" type="submit">Kirim Persyaratan</button>
+            </form>
+
+            <div id="req-message" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const COURSE_ID = {{ course_id }};
+</script>
+
+<script src="{% static 'js/course_requirements.js' %}"></script>
+{% endblock %}

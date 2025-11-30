@@ -1,0 +1,85 @@
+/* exam_attempt.css - modern circular navigation + clean question card */
+
+/* wrapper */
+#navigation-wrapper {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+
+/* title */
+#navigation-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 12px;
+}
+
+/* nav container */
+#navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* base button */
+.nav-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+
+/* states */
+.nav-btn-default {
+  background: #e6eefb;
+  color: #0f172a;
+}
+
+.nav-btn-answered {
+  background: #10b981;
+  color: #fff;
+}
+
+.nav-btn-current {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(37,99,235,0.18);
+  transform: scale(1.08);
+}
+
+.nav-btn:hover { opacity: .9; }
+
+/* question card */
+.question-card {
+  background: #fff;
+  padding: 22px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+  margin-bottom: 18px;
+}
+
+/* question title */
+.question-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* small helpers */
+.small-muted { color: #64748b; font-size: .95rem; }
+
+/* responsive */
+@media (max-width: 720px) {
+  .nav-btn { width: 40px; height: 40px; font-size: 14px; }
+  #navigation { gap: 8px; }
+}
