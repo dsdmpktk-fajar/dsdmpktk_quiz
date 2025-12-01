@@ -218,7 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${data.map(t => `
                     <li class="list-group-item">
                         <strong>${t.title}</strong><br>
-                        <small>${t.description || ""}</small>
+                        <small>${t.description || ""}</small><br>
+                        <a href="/courses/${COURSE_ID}/tasks/${t.id}/" 
+                        class="btn btn-primary btn-sm mt-2">Lihat / Submit</a>
                     </li>
                 `).join("")}
             </ul>
@@ -239,15 +241,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         examsList.innerHTML = `
             <ul class="list-group">
-                ${data.map(e => `
-                    <li class="list-group-item">
-                        <strong>${e.title}</strong><br>
-                        <a href="/exams/${e.id}/" class="btn btn-primary btn-sm mt-2">Mulai</a>
-                    </li>
-                `).join("")}
+                ${data.map(e => {
+                    let actionBtn = `
+                        <a href="/exams/${e.id}/start/" class="btn btn-primary btn-sm mt-2">Mulai</a>
+                    `;
+
+                    if (e.user_attempt) {
+                        // Jika user sudah punya attempt, redirect ke "attempt view"
+                        actionBtn = `
+                            <a href="/exams/${e.id}/attempt/${e.user_attempt}/" 
+                            class="btn btn-success btn-sm mt-2">Lanjutkan</a>
+                        `;
+                    }
+
+                    return `
+                        <li class="list-group-item">
+                            <strong>${e.title}</strong><br>
+                            ${actionBtn}
+                        </li>
+                    `;
+                }).join("")}
             </ul>
         `;
     }
+
+
 
     // ============================================================
     // INIT

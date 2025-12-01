@@ -1,178 +1,167 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from .models import CourseParticipant, Course, Exam, CourseTask, CourseTaskSubmission
+from exam.models import CourseParticipant, CourseTask, Exam, CourseTaskSubmission
 
 
-# ===========================================================
-# ADMIN GLOBAL (Django is_staff)
-# ===========================================================
+# =====================================================================
+# GLOBAL ADMIN (Django is_staff)
+# =====================================================================
 class IsAdmin(BasePermission):
-    """
-    Admin global, menggunakan Django is_staff.
-    """
     def has_permission(self, request, view):
         return bool(
-            request.user and 
-            request.user.is_authenticated and 
-            request.user.is_staff
+            request.user
+            and request.user.is_authenticated
+            and request.user.is_staff
         )
 
 
-# ===========================================================
-# ROLE CHECKING UTILITY
-# ===========================================================
-def get_course_id_from_view(view):
+# =====================================================================
+# Helper: Ambil course_id dari view OR body
+# =====================================================================
+def extract_course_id(view, request):
     """
-    Ambil ID course dari URL dynamic routing:
+    Mendapatkan course_id dari berbagai endpoint:
     - /courses/<pk>/
-    - /courses/<pk>/participants/
-    - /tasks/<pk>/submit/ → course diambil dari task.course
-    - /exams/<pk>/...
+    - /courses/<pk>/syllabus
+    - /tasks/<pk>/submit → task.course_id
+    - /exams/<pk>/questions → exam.course_id
+    - POST create exam/material: course_id ada di request.data
     """
-    pk = view.kwargs.get("pk") or view.kwargs.get("course_pk")
-    return pk
+
+    # From URL
+    course_id = view.kwargs.get("pk") or view.kwargs.get("course_id")
+
+    # ----- Task: pk = task_id -----
+    if view.basename == "tasks":
+        task_id = view.kwargs.get("pk")
+        if task_id:
+            try:
+                task = CourseTask.objects.get(id=task_id)
+                return task.course_id
+            except CourseTask.DoesNotExist:
+                pass
+
+    # ----- Exam: pk = exam_id -----
+    if view.basename == "exams":
+        exam_id = view.kwargs.get("pk")
+        if exam_id:
+            try:
+                exam = Exam.objects.get(id=exam_id)
+                return exam.course_id
+            except Exam.DoesNotExist:
+                pass
+
+    # Fallback from POST body (important for exam/material creation)
+    if not course_id:
+        course_id = request.data.get("course") or request.data.get("course_id")
+
+    return course_id
 
 
-def user_role_in_course(user, course_id, roles=None):
-    """
-    Mengecek apakah user memiliki role tertentu dalam course.
-    roles bisa berupa ["trainer"], ["assessor"], ["participant"], atau kombinasi.
-    """
-    qs = CourseParticipant.objects.filter(course_id=course_id, user=user)
+# =====================================================================
+# Helper: cek role user dalam course
+# =====================================================================
+def user_has_role(user, course_id, roles):
+    if not user or not user.is_authenticated:
+        return False
 
-    if roles:
-        qs = qs.filter(role__in=roles)
+    if not course_id:
+        return False
 
-    return qs.exists()
+    return CourseParticipant.objects.filter(
+        course_id=course_id,
+        user=user,
+        role__in=roles
+    ).exists()
 
 
-# ===========================================================
-# PARTICIPANT OF COURSE
-# ===========================================================
+# =====================================================================
+# Course Participant (semua role)
+# =====================================================================
 class IsCourseParticipant(BasePermission):
-    """
-    User harus terdaftar sebagai participant di course.
-    (participant, trainer, assessor → semua role dihitung participant)
-    """
     def has_permission(self, request, view):
-        course_id = get_course_id_from_view(view)
-        if not course_id:
-            return False
-
-        return CourseParticipant.objects.filter(
-            course_id=course_id,
-            user=request.user
-        ).exists()
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["participant", "trainer", "assessor"])
 
 
-# ===========================================================
-# TRAINER
-# ===========================================================
+# =====================================================================
+# Trainer only
+# =====================================================================
 class IsTrainer(BasePermission):
-    """
-    User harus role trainer pada course tersebut.
-    """
     def has_permission(self, request, view):
-        course_id = get_course_id_from_view(view)
-        if not course_id:
-            return False
-
-        return user_role_in_course(request.user, course_id, ["trainer"])
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["trainer"])
 
 
-# ===========================================================
-# ASSESSOR
-# ===========================================================
+# =====================================================================
+# Assessor only
+# =====================================================================
 class IsAssessor(BasePermission):
-    """
-    User harus role assessor pada course tersebut.
-    """
     def has_permission(self, request, view):
-        course_id = get_course_id_from_view(view)
-        if not course_id:
-            return False
-
-        return user_role_in_course(request.user, course_id, ["assessor"])
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["assessor"])
 
 
-# ===========================================================
-# TRAINER OR ASSESSOR
-# ===========================================================
+# =====================================================================
+# Trainer OR Assessor
+# =====================================================================
 class IsTrainerOrAssessor(BasePermission):
-    """
-    Trainer atau Assessor diperbolehkan.
-    """
     def has_permission(self, request, view):
-        course_id = get_course_id_from_view(view)
-        if not course_id:
-            return False
-
-        return user_role_in_course(request.user, course_id, ["trainer", "assessor"])
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["trainer", "assessor"])
 
 
-# ===========================================================
-# EXAM PARTICIPANT
-# ===========================================================
-class IsExamParticipant(BasePermission):
-    """
-    User harus terdaftar sebagai participant di course milik exam.
-    """
-    def has_object_permission(self, request, view, exam: Exam):
-        return CourseParticipant.objects.filter(
-            course=exam.course,
-            user=request.user
-        ).exists()
+# =====================================================================
+# Trainer OR Admin (untuk CRUD Course, Task, Material)
+# =====================================================================
+class IsTrainerOrAdmin(BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_authenticated and request.user.is_staff:
+            return True
+
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["trainer"])
 
 
-# ===========================================================
-# EXAM INSTRUCTOR (Trainer/Assessor)
-# ===========================================================
-class IsExamInstructorOrAssessor(BasePermission):
-    """
-    Hanya trainer dan assessor yang boleh melihat data peserta exam:
-    - melihat answer peserta
-    - melihat result peserta
-    - mengoreksi essay
-    """
-    def has_object_permission(self, request, view, exam: Exam):
-        return CourseParticipant.objects.filter(
-            course=exam.course,
-            user=request.user,
-            role__in=["trainer", "assessor"]
-        ).exists()
+# =====================================================================
+# Exam Creator (Admin + Trainer + Assessor)
+# digunakan untuk CRUD exam & CRUD questions
+# =====================================================================
+class IsExamCreator(BasePermission):
+    def has_permission(self, request, view):
+        # Admin = always allowed
+        if request.user.is_authenticated and request.user.is_staff:
+            return True
+
+        cid = extract_course_id(view, request)
+        return user_has_role(request.user, cid, ["trainer", "assessor"])
 
 
-# ===========================================================
-# TASK SUBMISSION OWNER
-# ===========================================================
+# =====================================================================
+# Task Grader (Trainer + Assessor)
+# =====================================================================
+class IsTaskGrader(BasePermission):
+    def has_object_permission(self, request, view, submission: CourseTaskSubmission):
+        cid = submission.task.course_id
+        return user_has_role(request.user, cid, ["trainer", "assessor"])
+
+
+# =====================================================================
+# Task Submission Owner (peserta hanya boleh melihat punya sendiri)
+# =====================================================================
 class IsTaskSubmissionOwner(BasePermission):
-    """
-    User hanya boleh melihat submitan dirinya sendiri.
-    """
     def has_object_permission(self, request, view, submission: CourseTaskSubmission):
         return submission.user == request.user
 
 
-# ===========================================================
-# TASK GRADER (Assessor)
-# ===========================================================
-class IsTaskGrader(BasePermission):
-    """
-    Hanya assessor boleh menilai task submission.
-    """
-    def has_object_permission(self, request, view, submission: CourseTaskSubmission):
-        course = submission.task.course
-        return CourseParticipant.objects.filter(
-            course=course,
-            user=request.user,
-            role="assessor"
-        ).exists()
-
-
-# ===========================================================
-# READONLY UNTUK SEMUA USER, WRITE UNTUK ADMIN/STAFF
-# ===========================================================
+# =====================================================================
+# Read-only for all, write-only for admin
+# =====================================================================
 class ReadOnlyOrAdmin(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-        return request.user.is_staff
+        return (
+            request.user
+            and request.user.is_authenticated
+            and request.user.is_staff
+        )

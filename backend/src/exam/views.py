@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 
-from rest_framework import viewsets, status, permissions as drf_permissions
+from rest_framework import viewsets, status, permissions as drf_permissions,filters
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -29,8 +29,9 @@ from .models import (
     CourseTaskSubmission,
     CourseTaskSubmissionFile,
     CourseRequirementAnswer,
-    CourseAssessment,
     CourseRequirementSubmission,
+    CourseRequirementTemplate,
+    CourseAssessment,
     CourseAssessmentCriteria,
     UserAnswerFile
 )
@@ -62,6 +63,7 @@ from .serializers import (
     CourseTaskSerializer,
     CourseTaskSubmissionSerializer,
     CourseTaskSubmissionFileSerializer,
+    CoursePublicSerializer,
 
     CourseRequirementTemplateSerializer,
     CourseRequirementSubmissionSerializer,
@@ -79,17 +81,19 @@ from .serializers import (
 # ============================
 from .permissions import (
     IsAdmin,
-    IsCourseParticipant,
     IsTrainer,
     IsAssessor,
     IsTrainerOrAssessor,
+    IsCourseParticipant,
     IsExamParticipant,
     IsExamInstructorOrAssessor,
     IsTaskSubmissionOwner,
     IsTaskGrader,
-    ReadOnlyOrAdmin,
+    IsTrainerOrAdmin,
+    IsExamCreator,
     user_role_in_course,
 )
+
 
 # ================================================================
 # ⚡  COURSE VIEWSET
@@ -98,10 +102,12 @@ class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all().order_by("-created_at")
     serializer_class = CourseSerializer
     permission_classes = [drf_permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["title", "description"]
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAdmin()]
+            return [IsTrainerOrAdmin()]
         return [drf_permissions.IsAuthenticated()]
 
     # =====================================================================
@@ -372,9 +378,14 @@ class CourseViewSet(viewsets.ModelViewSet):
     # SYLLABUS CRUD
     # =====================================================================
     def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return CoursePublicSerializer
+
         if self.action in ["syllabus_create", "syllabus_update"]:
             return CourseSyllabusCreateUpdateSerializer
+
         return CourseSerializer
+
 
 
     @action(detail=True, methods=["get"], url_path="syllabus")
@@ -387,7 +398,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="syllabus/create")
     def syllabus_create(self, request, pk=None):
         course = self.get_object()
-        if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer", "admin"])):
+        if not (request.user.is_staff or user_role_in_course(request.user, course.id, ["trainer"])):
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
         serializer = CourseSyllabusCreateUpdateSerializer(data=request.data)
@@ -623,7 +634,7 @@ class ExamViewSet(viewsets.ModelViewSet):
 
         if self.action in ["create", "update", "partial_update", "destroy",
                            "create_question", "update_question", "delete_question"]:
-            return [IsAdmin()]
+            return [IsExamCreator()]
 
         return [drf_permissions.IsAuthenticated()]
 
@@ -650,7 +661,7 @@ class ExamViewSet(viewsets.ModelViewSet):
         if user.is_staff:
             return ExamAdminSerializer
 
-        if exam and user_role_in_course(user, exam.course_id, ["trainer"]):
+        if exam and user_role_in_course(user, exam.course_id, ["trainer", "assessor"]):
             return ExamAdminSerializer
 
         return ExamPublicSerializer
@@ -1050,7 +1061,7 @@ class ExamViewSet(viewsets.ModelViewSet):
     detail=True,
     methods=["get"],
     url_path="competency-summary",
-    permission_classes=[IsExamInstructorOrAssessor | IsAdmin]
+    permission_classes=[IsExamInstructorOrAssessor, IsAdmin]
     )
     def competency_summary(self, request, pk=None):
         exam = self.get_object()
@@ -1110,30 +1121,73 @@ class CourseTaskViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAdmin()]
+            return [IsTrainerOrAdmin()]
         if self.action == "submit_task":
             return [IsCourseParticipant()]
         return [drf_permissions.IsAuthenticated()]
+
 
     @action(detail=True, methods=["post"], url_path="submit")
     def submit_task(self, request, pk=None):
         task = self.get_object()
 
+        # must be participant
         if not CourseParticipant.objects.filter(course=task.course, user=request.user).exists():
             return Response({"detail": "Tidak diizinkan."}, status=403)
 
-        if CourseTaskSubmission.objects.filter(task=task, user=request.user).exists():
-            return Response({"detail": "Sudah submit."}, status=400)
+        # check existing submission
+        existing = CourseTaskSubmission.objects.filter(task=task, user=request.user).first()
 
-        sub = CourseTaskSubmission.objects.create(task=task, user=request.user)
+        if existing:
+            # REPLACE submission
+            CourseTaskSubmissionFile.objects.filter(submission=existing).delete()
+
+            existing.remarks = request.data.get("remarks", "")
+            existing.submitted_at = timezone.now()
+            existing.save()
+
+            for f in request.FILES.getlist("files"):
+                CourseTaskSubmissionFile.objects.create(submission=existing, file=f)
+
+            return Response({
+                "detail": "Submission diperbarui.",
+                "submission_id": existing.id,
+                "submission": CourseTaskSubmissionSerializer(existing).data
+            })
+
+        # FIRST submission
+        sub = CourseTaskSubmission.objects.create(
+            task=task,
+            user=request.user,
+            remarks=request.data.get("remarks", "")
+        )
 
         for f in request.FILES.getlist("files"):
             CourseTaskSubmissionFile.objects.create(submission=sub, file=f)
 
         return Response({
             "detail": "Submit berhasil.",
-            "submission_id": sub.id
+            "submission_id": sub.id,
+            "submission": CourseTaskSubmissionSerializer(sub).data
         }, status=201)
+
+
+    
+    @action(detail=True, methods=["get"], url_path="my")
+    def my_submission(self, request, pk=None):
+        task = self.get_object()
+
+        sub = CourseTaskSubmission.objects.filter(task=task, user=request.user).first()
+
+        if not sub:
+            # FIX: return valid JSON, not empty response
+            return Response({}, status=200)
+
+        ser = CourseTaskSubmissionSerializer(sub)
+        return Response(ser.data)
+
+
+
 
 
 # ================================================================
@@ -1145,8 +1199,12 @@ class TaskSubmissionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [drf_permissions.IsAuthenticated]
 
     def get_permissions(self):
+        # gunakan self.request, bukan request local yang tidak didefinisikan
         if self.action in ["list", "retrieve"]:
-            return [IsAdmin(), IsTrainerOrAssessor()]
+            # admin lihat semua, trainer/assessor juga boleh
+            if self.request.user.is_staff:
+                return [IsAdmin()]
+            return [IsTrainerOrAssessor()]
         return [drf_permissions.IsAuthenticated()]
 
 
@@ -1171,12 +1229,11 @@ class AdminDashboardAPIView(APIView):
         # Pending requirement approvals
         pending_requirements = CourseRequirementSubmission.objects.filter(status="pending").count()
 
-        # Pending task grading: submissions that are not graded
+        # Pending task grading
         pending_task_grading = CourseTaskSubmission.objects.filter(graded=False).count()
 
-        # Pending essay grading (UserAnswer with text_answer and graded=False)
-        pending_essay_grading = UserAnswer.objects.filter(text_answer__isnull=False, text_answer__exact="",).count()
-        # Note: above line counts empty text answers; better detect non-empty:
+
+        # Pending essay grading
         pending_essay_grading = UserAnswer.objects.filter(text_answer__isnull=False).exclude(text_answer="").filter(graded=False).count()
 
         # Running / active courses (overlapping today)

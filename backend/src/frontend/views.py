@@ -111,3 +111,12 @@ def page_exam_result(request, exam_id, user_exam_id):
         "exam_id": exam_id,
         "attempt_id": user_exam_id,  # <-- sama
     })
+
+
+@login_required
+def page_task_detail(request, course_id, task_id):
+    return render(request, "pages/courses/task_detail.html", {
+        "course_id": course_id,
+        "task_id": task_id,
+    })
+

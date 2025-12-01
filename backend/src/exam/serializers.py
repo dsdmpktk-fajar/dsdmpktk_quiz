@@ -47,6 +47,56 @@ class CourseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "participants_count", "created_at"]
 
+# ============================================================
+# COURSE PUBLIC SERIALIZER (UNTUK FRONTEND)
+# ============================================================
+from .models import CourseParticipant, CourseRequirementSubmission
+
+class CoursePublicSerializer(CourseSerializer):
+    joined = serializers.SerializerMethodField()
+    requires_approval = serializers.SerializerMethodField()
+    requirement_status = serializers.SerializerMethodField()
+    token = serializers.SerializerMethodField(read_only=True)
+
+    class Meta(CourseSerializer.Meta):
+        fields = CourseSerializer.Meta.fields + [
+            "joined",
+            "requires_approval",
+            "requirement_status",
+            "token",
+        ]
+
+    # apakah user sudah participant
+    def get_joined(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return CourseParticipant.objects.filter(course=obj, user=request.user).exists()
+
+    # apakah course punya requirement template
+    def get_requires_approval(self, obj):
+        return obj.requirements.exists()
+
+    # pending / approved / rejected / None
+    def get_requirement_status(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+
+        sub = CourseRequirementSubmission.objects.filter(
+            course=obj, user=request.user
+        ).order_by("-submitted_at").first()
+
+        return sub.status if sub else None
+
+    # token hanya untuk admin
+    def get_token(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_staff:
+            return obj.token
+        return None
+
+
 
 # ============================================================
 # COURSE PARTICIPANT

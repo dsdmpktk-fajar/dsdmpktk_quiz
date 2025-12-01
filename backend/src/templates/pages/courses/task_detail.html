@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Submit Tugas{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <a href="/courses/{{ course_id }}/" class="btn btn-sm btn-light mb-3">← Kembali ke Course</a>
+
+    <h3 id="task-title">Memuat...</h3>
+    <p id="task-desc" class="text-muted"></p>
+
+    <div class="mb-3">
+        <strong>Max Submissions:</strong> <span id="task-max"></span><br>
+        <strong>Status Submit:</strong> <span id="task-count"></span>
+    </div>
+
+    <hr>
+
+    <h5>Submit Tugas</h5>
+    <form id="task-form" class="mb-4">
+        <textarea id="answer-remarks" class="form-control mb-2" placeholder="Catatan / deskripsi (opsional)"></textarea>
+
+        <input type="file" id="answer-files" multiple class="form-control mb-2">
+
+        <button class="btn btn-primary btn-sm">Kirim Tugas</button>
+        <div id="submit-msg" class="mt-2 small"></div>
+    </form>
+
+    <hr>
+
+    <h5>Riwayat Submission Anda</h5>
+    <div id="submissions-list">Memuat...</div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const COURSE_ID = {{ course_id }};
+    const TASK_ID = {{ task_id }};
+</script>
+<script src="{% static 'js/task_detail.js' %}"></script>
+{% endblock %}

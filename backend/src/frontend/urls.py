@@ -5,7 +5,7 @@ from .views import (
     page_certifications, page_languages, page_trainings, page_generate_cv,
     page_courses, page_course_detail, page_course_requirements,
     page_exams, page_exam_start, page_exam_attempt, page_exam_result,
-    admin_dashboard_page,
+    admin_dashboard_page, page_task_detail
 )
 
 urlpatterns = [
@@ -33,6 +33,12 @@ urlpatterns = [
     path('courses/', page_courses, name='ui_courses'),
     path('courses/<int:course_id>/', page_course_detail, name='ui_course_detail'),
     path("courses/<int:course_id>/requirements/", page_course_requirements, name="ui_course_requirements"),
+
+     path(
+          "courses/<int:course_id>/tasks/<int:task_id>/",
+          page_task_detail,
+          name="ui_task_detail"
+    ),
 
     # ===============================
     # EXAM PAGES

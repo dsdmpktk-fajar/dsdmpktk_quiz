@@ -218,9 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${data.map(t => `
                     <li class="list-group-item">
                         <strong>${t.title}</strong><br>
-                        <small>${t.description || ""}</small><br>
-                        <a href="/courses/${COURSE_ID}/tasks/${t.id}/" 
-                        class="btn btn-primary btn-sm mt-2">Lihat / Submit</a>
+                        <small>${t.description || ""}</small>
                     </li>
                 `).join("")}
             </ul>
